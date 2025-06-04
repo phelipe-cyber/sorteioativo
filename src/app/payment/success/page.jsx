@@ -1,103 +1,156 @@
 // app/payment/success/page.jsx
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../../context/AuthContext'; // Ajuste o caminho
 import Link from 'next/link';
 import Spinner from '../../../../components/Spinner'; // Ajuste o caminho
 
-export default function PaymentSuccessPage() {
+// Componente interno que usa useSearchParams
+function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { token, isAuthenticated } = useAuth();
-  const orderId = searchParams.get('order_id');
-  const paymentId = searchParams.get('payment_id'); // MP envia payment_id e outros
-  const status = searchParams.get('status');
+  const { token, isAuthenticated, loading: authLoading } = useAuth();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [message, setMessage] = useState('Processando seu pedido...');
+  const orderId = searchParams.get('order_id');
+  const paymentId = searchParams.get('payment_id');
+  const mpStatus = searchParams.get('status');
+  // const externalReference = searchParams.get('external_reference'); // Pode ser útil para verificação
+
+  const [isLoadingPage, setIsLoadingPage] = useState(true); // Renomeado para evitar conflito com authLoading
+  const [message, setMessage] = useState('Processando a confirmação do seu pedido...');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isAuthenticated || !token || !orderId ) {
-      // Poderia redirecionar ou mostrar mensagem se algo estiver faltando
-      // Idealmente, o webhook já processou, mas podemos fazer uma chamada para confirmar
-      // e finalizar a marcação dos números se necessário.
-      // Para simplificar, apenas mostramos sucesso se MP redirecionou para cá.
-      // E confiamos no webhook para a lógica principal.
+    console.log("Página de Sucesso (Conteúdo) - Order ID:", orderId);
+    console.log("Página de Sucesso (Conteúdo) - Payment ID (MP):", paymentId);
+    console.log("Página de Sucesso (Conteúdo) - Status (MP):", mpStatus);
+
+    if (authLoading) {
+      // Aguarda a autenticação carregar antes de prosseguir
       return;
     }
 
-    // A API /api/orders que tínhamos antes era para CRIAR uma nova ordem.
-    // Agora que a ordem já foi criada com status 'pending' pela API de preferência,
-    // o webhook do Mercado Pago deve ter atualizado o status para 'completed'.
-    // Opcional: O frontend pode chamar uma API para buscar o status final do pedido
-    // e confirmar se os números foram marcados como vendidos.
-    // Por ora, vamos assumir que o webhook fez seu trabalho.
-
-    setMessage(`Pagamento para o pedido ${orderId} aprovado (Status MP: ${status}, ID Pagamento MP: ${paymentId})! Seus números foram registrados.`);
-    setIsLoading(false);
-
-    // Exemplo de como você poderia chamar a API /api/orders que marca os números como vendidos:
-    // Esta lógica precisa ser BEM definida. A API /api/orders atual cria um NOVO pedido.
-    // Precisaríamos de uma API /api/orders/[orderId]/finalize ou modificar /api/orders
-    // para aceitar um orderId e finalizar uma ordem PENDENTE.
-    // A API de webhook é o lugar MAIS SEGURO para marcar números como vendidos.
-    // Se você ajustou o webhook para marcar os números como 'sold', então esta página é apenas informativa.
-
-    /*
-    const finalizeOrder = async () => {
-      try {
-        // Esta é a API que criamos que verifica disponibilidade e marca como 'sold'
-        // Ela precisa ser idempotente ou saber lidar com um pedido já 'completed' pelo webhook.
-        // A API /api/orders atual cria um novo pedido. Isso não está certo aqui.
-        // Você precisaria de uma API /api/orders/confirm/[orderId] ou similar.
-        // Por ora, vamos remover esta chamada e confiar no webhook + mensagem de sucesso.
-
-        // const response = await fetch(`/api/orders`, { // PRECISA SER UMA NOVA API OU AJUSTE
-        //   method: 'POST',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //     'Authorization': `Bearer ${token}`
-        //   },
-        //   body: JSON.stringify({
-        //     // Passar o orderId que foi criado como 'pending'
-        //     // E os números que foram selecionados (precisaria buscá-los da ordem 'pending')
-        //     // Esta parte requer uma refatoração significativa da API /api/orders.
-        //   })
-        // });
-        // const data = await response.json();
-        // if(!response.ok) throw new Error(data.message || "Erro ao finalizar pedido no sistema.");
-
-        // setMessage(`Pedido ${orderId} finalizado com sucesso no sistema!`);
-
-      } catch(err) {
-        console.error("Erro ao tentar finalizar pedido no frontend:", err);
-        setMessage(`Pagamento aprovado, mas houve um erro ao finalizar o pedido no nosso sistema: ${err.message}. Contate o suporte com o ID do pedido ${orderId}.`);
-      } finally {
-        setIsLoading(false);
-      }
+    if (!isAuthenticated || !token) {
+      setError("Sessão inválida. Por favor, faça login para confirmar seu pedido ou verifique 'Meus Números'.");
+      setIsLoadingPage(false);
+      return;
     }
-    finalizeOrder();
-    */
+    
+    if (!orderId) {
+      setError("ID do pedido não encontrado na URL de retorno. Não é possível finalizar.");
+      setIsLoadingPage(false);
+      return;
+    }
 
+    const finalizeOrderInSystem = async () => {
+      setIsLoadingPage(true);
+      setError('');
+      setMessage(`Confirmando pedido ${orderId} em nosso sistema...`);
+      try {
+        // A API /api/orders (POST) é responsável por:
+        // 1. Verificar se o pedido (internalOrderId) existe e pertence ao usuário.
+        // 2. Verificar a disponibilidade final dos números (caso o webhook ainda não tenha processado ou como dupla checagem).
+        // 3. Marcar os números como 'sold' na tabela raffle_numbers.
+        // 4. Atualizar o status do pedido para 'completed' na tabela orders.
+        const response = await fetch(`/api/orders`, { // Chamando a API que finaliza a compra
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            internalOrderId: parseInt(orderId), // Passa o ID do pedido que foi criado como 'pending'
+            // A API /api/orders deve ser capaz de buscar productId e selectedNumbers
+            // a partir do internalOrderId (que foram salvos quando o pedido foi para 'pending'
+            // e os números foram reservados).
+            paymentDetails: `Mercado Pago Payment ID: ${paymentId}, Status MP: ${mpStatus} (retorno success)`
+          })
+        });
 
-  }, [orderId, paymentId, status, token, isAuthenticated, router]);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Erro ao finalizar o pedido em nosso sistema.");
+        }
+        setMessage(data.message || `Pedido ${orderId} finalizado com sucesso! Seus números foram garantidos.`);
 
-  if (isLoading) {
-    return <div className="flex flex-col items-center justify-center "><Spinner size="h-12 w-12"/><p className="mt-4">Processando...</p></div>;
+      } catch (err) {
+        console.error("Erro ao tentar finalizar pedido no frontend (success page):", err);
+        setError(`Pagamento aprovado pelo Mercado Pago, mas houve um erro ao finalizar o pedido em nosso sistema: ${err.message}. Contate o suporte com o ID do pedido ${orderId}.`);
+        setMessage(''); 
+      } finally {
+        setIsLoadingPage(false);
+      }
+    };
+
+    finalizeOrderInSystem();
+
+  }, [orderId, paymentId, mpStatus, token, isAuthenticated, authLoading, router]); // Adicionado authLoading
+
+  if (isLoadingPage || authLoading) { // Verifica ambos os loadings
+    return (
+        <div className="flex flex-col items-center justify-center p-4">
+            <Spinner size="h-10 w-10 text-green-500"/>
+            <p className="mt-3 text-gray-600">{message || "Carregando..."}</p>
+        </div>
+    );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center  p-4 text-center">
-      <h1 className="text-3xl font-bold text-green-600 mb-4">Pagamento Aprovado!</h1>
-      <p className="text-lg mb-2">{message}</p>
-      <p className="text-sm text-gray-600 mb-6">Obrigado por participar!</p>
-      <Link href="/my-numbers" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg mr-2">
-        Ver Meus Números
-      </Link>
-      <Link href="/" className="text-indigo-600 hover:text-indigo-800 font-semibold py-3 px-6">
-        Voltar para Sorteios
-      </Link>
+    <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full">
+      {error ? (
+        <>
+          <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <h1 className="text-2xl sm:text-3xl font-bold text-red-600 mb-3">Erro ao Finalizar Pedido</h1>
+          <p className="text-gray-700 mb-6">{error}</p>
+        </>
+      ) : (
+        <>
+          <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <h1 className="text-2xl sm:text-3xl font-bold text-green-600 mb-3">Pagamento Aprovado!</h1>
+          <p className="text-gray-700 mb-6">{message}</p>
+        </>
+      )}
+      
+      <p className="text-gray-600 mb-6">
+        Obrigado por participar do nosso sorteio!
+      </p>
+
+      <div className="space-y-3">
+        {isAuthenticated && (
+             <Link href="/my-numbers" className="block w-full text-center bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-colors">
+                Ver Meus Números
+            </Link>
+        )}
+        <Link 
+          href="/" 
+          className="block w-full text-center text-gray-700 hover:text-gray-900 font-semibold py-3 px-6 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          Voltar para a Página Inicial
+        </Link>
+      </div>
+      {paymentId && (
+          <p className="text-xs text-gray-400 mt-6">
+              ID da transação (MP): {paymentId}
+          </p>
+      )}
+    </div>
+  );
+}
+
+
+export default function PaymentSuccessPage() {
+  // Este componente pai agora só envolve o SuccessContent com Suspense
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow-xl max-w-lg w-full">
+          <Spinner size="h-10 w-10 text-green-500" />
+          <p className="mt-3 text-gray-600">Carregando confirmação do pagamento...</p>
+        </div>
+      }>
+        <SuccessContent />
+      </Suspense>
     </div>
   );
 }

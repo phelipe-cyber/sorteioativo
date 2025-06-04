@@ -85,27 +85,60 @@ export async function POST(request) {
   let rawBody;
   try {
     rawBody = await request.text();
-    console.log('MP Webhook v2: Corpo RAW (preview):', rawBody.substring(0, 200) + "...");
-  } catch (error) { /* ... */ }
-
+    // console.log('MP Webhook v2: Corpo RAW (preview):', rawBody.substring(0, 200) + "...");
+  } catch (e) { // Usando 'e'
+    console.error('MP Webhook v2: Erro ao ler o corpo da requisição como texto:', e);
+    return new NextResponse(JSON.stringify({ message: 'Erro ao processar corpo da requisição.' }), {
+      status: 400, 
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  
   if (!verifySignature(requestCloneForHeaders, rawBody)) { 
     console.error('MP Webhook v2: FALHA NA ASSINATURA! Rejeitando.');
     return new NextResponse(JSON.stringify({ message: 'Assinatura inválida.' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' },
+      status: 401, 
+      headers: { 'Content-Type': 'application/json' },
     });
   }
-  console.log('MP Webhook v2: Assinatura OK. Processando...');
+  console.log('MP Webhook v2: Assinatura verificada com SUCESSO. Prosseguindo com o processamento.');
+
 
   let body;
-  try { body = JSON.parse(rawBody); /* ... */ } catch (error) { /* ... */ }
 
-  const { type, data, action } = body; 
+  try {
+    body = JSON.parse(rawBody);
+    // console.log('MP Webhook v2: Corpo parseado após verificação:', JSON.stringify(body, null, 2));
+  } catch (e) { // Usando 'e'
+    console.error('MP Webhook v2: Erro ao parsear rawBody para JSON após verificação:', e);
+    return new NextResponse(JSON.stringify({ message: 'Corpo da requisição inválido após verificação de assinatura.' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Se 'type' e 'action' não são usados diretamente na lógica abaixo, podem ser removidos da desestruturação.
+  // Por enquanto, vamos mantê-los para o log, mas se o ESLint ainda reclamar, remova-os.
+  const { data } = body; 
   let paymentId;
   // ... (lógica para extrair paymentId)
-  if (data?.id) { paymentId = data.id; }
-  // ... (mais lógica de extração se necessário)
 
-  if (!paymentId) { /* ... (retornar erro 200 para MP) ... */ }
+  if (data?.id) { 
+    paymentId = data.id;
+  } else if (action?.startsWith('payment.')) { // 'action' é usado aqui
+    if (body.resource) { 
+        const urlParts = body.resource.split('/');
+        paymentId = urlParts[urlParts.length -1];
+    }
+    else if (data?.id) { 
+        paymentId = data.id;
+    }
+  }
+
+  if (!paymentId) { 
+    console.log('MP Webhook v2: ID do pagamento não encontrado. Type:', type, 'Action:', action, 'Data:', data); // 'type' e 'action' usados no log
+    return NextResponse.json({ message: 'ID do pagamento não encontrado ou evento não processável.' }, { status: 200 });
+   }
     
   console.log(`MP Webhook v2: Processando pagamento ID: ${paymentId}`);
 
@@ -119,7 +152,10 @@ export async function POST(request) {
       const { status: mpStatus, external_reference, id: mp_payment_id } = paymentInfo;
       const internalOrderId = parseInt(external_reference, 10);
 
-      if (isNaN(internalOrderId) || internalOrderId <= 0) { /* ... */ }
+      if (isNaN(internalOrderId) || internalOrderId <= 0) {
+        console.error(`MP Webhook v2: external_reference (internalOrderId) inválido: ${external_reference}`);
+        return NextResponse.json({ message: 'Referência externa inválida.' }, { status: 200 });
+       }
       
       connection = await dbPool.getConnection();
       await connection.beginTransaction();
@@ -129,13 +165,15 @@ export async function POST(request) {
           [internalOrderId]
       );
 
-      if (currentOrderRows.length === 0) { /* ... */ }
+      if (currentOrderRows.length === 0) { 
+        console.error(`MP Webhook v2: Pedido interno ${internalOrderId} não encontrado.`);
+        await connection.rollback();
+        return NextResponse.json({ message: 'Pedido interno não encontrado.' }, { status: 200 });
+       }
       
       const currentOrder = currentOrderRows[0];
       const currentOrderStatusInDb = currentOrder.status;
-      const orderUserId = currentOrder.user_id; // Pegar o user_id da ordem
-      const orderProductId = currentOrder.product_id; // Pegar o product_id da ordem
-
+      
       console.log(`MP Webhook v2: Pedido ${internalOrderId} no DB: ${currentOrderStatusInDb}. Status MP: ${mpStatus}`);
 
       if (currentOrderStatusInDb === 'completed' && mpStatus === 'approved') { /* ... */ }
@@ -175,12 +213,25 @@ export async function POST(request) {
         }
         // --- FIM DA LÓGICA PARA ATUALIZAR raffle_numbers ---
 
-      } else { /* ... (log de status já reflete) ... */ }
+      } else { 
+        /* ... (log de status já reflete) ... */
+        console.log(`MP Webhook v2: Status do pedido ${internalOrderId} no DB ('${currentOrderStatusInDb}') já reflete o status do MP ('${mpStatus}') ou não requer atualização.`);
+      }
 
       await connection.commit();
       return NextResponse.json({ message: 'Webhook processado com sucesso.' }, { status: 200 });
-    } else { /* ... (pagamento não encontrado no MP) ... */ }
-  } catch (error) { /* ... (erro crítico) ... */ }
+    } else { 
+      /* ... (pagamento não encontrado no MP) ... */ 
+      console.error('MP Webhook v2: Informação do pagamento não encontrada na resposta do MP para ID:', paymentId);
+      return NextResponse.json({ message: 'Pagamento não encontrado no Mercado Pago (resposta vazia).' }, { status: 200 });
+    }  
+  } catch (error) {  if (connection) await connection.rollback();
+    const errorMessage = error.cause?.message || error.data?.message || error.message || 'Erro desconhecido no processamento do webhook';
+    console.error('MP Webhook v2: Erro CRÍTICO ao processar webhook:', error.cause || error.data || e); // Usando 'e'
+    return new NextResponse(JSON.stringify({ message: 'Erro interno crítico no webhook.', details: errorMessage }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
+   }
   finally {
       if (connection) connection.release();
       console.log('--- FIM DA REQUISIÇÃO WEBHOOK MERCADO PAGO ---');
