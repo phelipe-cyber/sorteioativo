@@ -1,0 +1,54 @@
+# docker-compose.yml
+
+# version: '3.8'
+
+services:
+  # Serviço do Banco de Dados MySQL
+  db:
+    image: mysql:8.0
+    container_name: mysql_db_sorteio
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sorteio
+      MYSQL_USER: sorteio
+      MYSQL_PASSWORD: sorteio
+      MYSQL_ROOT_PASSWORD: "#tr0caf0ne#" # Use variáveis de ambiente para senhas
+    ports:
+      # Expõe a porta do MySQL para o host (máquina local)
+      # Formato: <porta_no_host>:<porta_no_container>
+      - '3306:3306'
+    volumes:
+      # Persiste os dados do banco de dados em uma pasta local
+      - mysql-data:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+      - ./mysql/dump.sql:/docker-entrypoint-initdb.d/dump.sql
+    healthcheck:
+      # test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p","MYSQL_ROOT_PASSWORD"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Serviço da Aplicação Next.js
+  app:
+    build: .. # Constrói a imagem a partir do Dockerfile na pasta atual
+    container_name: nextjs_app_sorteio
+    ports:
+      - '3000:3000'
+    volumes:
+      # Monta o código-fonte local no contêiner para permitir o hot-reloading
+      - ..:/app
+      # Impede que a pasta node_modules local sobrescreva a do contêiner
+      - /app/node_modules
+    command: npm run dev
+    env_file:
+      - ../.env.local # Carrega as variáveis de ambiente do seu arquivo .env.local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy # Garante que o app só inicie depois que o banco de dados estiver pronto
+
+volumes:
+  # Define o volume nomeado para persistir os dados do MySQL
+  mysql-data:
