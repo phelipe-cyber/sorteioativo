@@ -1,50 +1,35 @@
+// app/layout.tsx
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+// import { GeistSans } from "geist/font/sans"; // Removido se não usado
+// import { GeistMono } from "geist/font/mono"; // Removido se não usado
 import "./globals.css";
+import { AuthProvider } from "../../context/AuthContext"; // Ajuste o caminho se necessário
+import Header from "../../components/Header";       // Ajuste o caminho se necessário
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Se GeistSans e GeistMono não são usados, não precisa adicioná-los às classes do body
+// const inter = Inter({ subsets: ["latin"] }); // Exemplo se fosse usar Inter
 
 export const metadata: Metadata = {
-  title: 'Site de Sorteios',
-  description: 'Participe dos nossos sorteios!',
-  viewport: 'width=device-width, initial-scale=1.0',
+  title: "Site de Sorteios",
+  description: "Participe dos nossos sorteios e ganhe prêmios incríveis!",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="pt-br">
-      { <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </head> }
-      <body>
+    <html lang="pt-br" className="h-full bg-white"> {/* Removido: ${GeistSans.variable} ${GeistMono.variable} se não usados */}
+      <body className="h-full flex flex-col"> {/* Removido: inter.className se não usado */}
         <AuthProvider>
-          <main className="container mx-auto p-4">{children}</main>
+          <Header />
+          <main className="flex-grow container mx-auto p-4 w-full">
+            {children}
+          </main>
+          {/* Footer opcional */}
         </AuthProvider>
       </body>
     </html>
   );
 }
-
-// export default function RootLayout({
-//   children,
-// }: Readonly<{
-//   children: React.ReactNode;
-// }>) {
-//   return (
-//     <html lang="pt-br">
-//       <body
-//         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-//       >
-//         {children}
-//       </body>
-//     </html>
-//   );
-// }

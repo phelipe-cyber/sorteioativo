@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server';
 import { query } from '../../../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { use } from 'react';
 
 /**
  * @swagger

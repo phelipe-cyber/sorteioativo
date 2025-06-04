@@ -1,7 +1,7 @@
 // app/login/page.jsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import { useAuth } from '../../../context/AuthContext'; // Ajuste o caminho se necessário
 import Link from 'next/link';
 import Spinner from '../../../components/Spinner'; // Ajuste o caminho se necessário
@@ -24,7 +24,8 @@ const IconEyeOff = () => (
     </svg>
 );
 
-export default function LoginPage() {
+// Componente interno que usa useSearchParams
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); 
@@ -34,7 +35,7 @@ export default function LoginPage() {
   
   const { login } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams(); 
+  const searchParams = useSearchParams(); // Hook usado aqui
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,7 +50,12 @@ export default function LoginPage() {
 
       if (pendingPurchaseRaw) {
         const pendingPurchase = JSON.parse(pendingPurchaseRaw);
-        router.push(`/products/${pendingPurchase.productId}`);
+        // Verificar se o produto existe antes de redirecionar
+        if (pendingPurchase && pendingPurchase.productId) {
+            router.push(`/products/${pendingPurchase.productId}`);
+        } else {
+            router.push('/'); // Fallback se pendingPurchase for inválido
+        }
       } else if (redirectUrl) {
         router.push(redirectUrl);
       } else {
@@ -64,76 +70,84 @@ export default function LoginPage() {
   };
 
   return (
-    // Removido bg-gray-100 daqui
-    <div className="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8"> 
-      <div className="bg-white p-6 sm:p-10 rounded-xl shadow-2xl max-w-md w-full">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-8">
-          Acessar Conta
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email <span className="text-red-500">*</span></label>
+    <div className="bg-white p-6 sm:p-10 rounded-xl shadow-2xl max-w-md w-full">
+      <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-8">
+        Acessar Conta
+      </h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email <span className="text-red-500">*</span></label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+            required
+            disabled={isLoading}
+            placeholder="seuemail@example.com"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">Senha <span className="text-red-500">*</span></label>
+          <div className="relative">
             <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
               required
               disabled={isLoading}
-              placeholder="seuemail@example.com"
+              placeholder="Sua senha"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-indigo-600 focus:outline-none"
+              aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+              disabled={isLoading}
+            >
+              {showPassword ? <IconEyeOff /> : <IconEye />}
+            </button>
           </div>
+        </div>
+        
+        {error && <p className="text-red-600 text-center text-sm p-3 bg-red-50 rounded-lg border border-red-200">{error}</p>}
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">Senha <span className="text-red-500">*</span></label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                required
-                disabled={isLoading}
-                placeholder="Sua senha"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-indigo-600 focus:outline-none"
-                aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
-                disabled={isLoading}
-              >
-                {showPassword ? <IconEyeOff /> : <IconEye />}
-              </button>
-            </div>
-          </div>
-          
-          {error && <p className="text-red-600 text-center text-sm p-3 bg-red-50 rounded-lg border border-red-200">{error}</p>}
+        <button
+          type="submit"
+          className="w-full bg-indigo-600 text-white font-semibold py-3.5 px-5 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-150 ease-in-out disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center text-base"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Spinner size="h-5 w-5" />
+              <span className="ml-2">Entrando...</span>
+            </>
+          ) : (
+            'Entrar'
+          )}
+        </button>
+      </form>
+      <p className="text-center mt-6 text-sm">
+        Não tem uma conta? 
+        <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline ml-1">
+          Registre-se aqui
+        </Link>
+      </p>
+    </div>
+  );
+}
 
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white font-semibold py-3.5 px-5 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-150 ease-in-out disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center text-base"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Spinner size="h-5 w-5" />
-                <span className="ml-2">Entrando...</span>
-              </>
-            ) : (
-              'Entrar'
-            )}
-          </button>
-        </form>
-        <p className="text-center mt-6 text-sm">
-          Não tem uma conta? 
-          <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline ml-1">
-            Registre-se aqui
-          </Link>
-        </p>
-      </div>
+export default function LoginPage() {
+  return (
+    // Wrapper da página
+    <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Suspense fallback={<div className="flex justify-center items-center h-64"><Spinner size="h-10 w-10 text-indigo-600" /> <p className="ml-3">Carregando formulário...</p></div>}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
