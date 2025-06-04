@@ -1,0 +1,174 @@
+
+openapi: 3.0.0
+info:
+  title: API de Sorteios
+  version: 1.0.0
+paths:
+  /api/products/{id}:
+    get:
+      summary: Retorna os detalhes de um produto específico e seus números
+      description: Busca os detalhes de um produto pelo seu ID, juntamente com a lista completa de seus números e seus respectivos status (disponível, vendido, etc.).
+      tags:
+        - Products
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: O ID numérico do produto.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do produto e a lista de números.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      description:
+                        type: string
+                      price_per_number:
+                        type: number
+                      numbers:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            number_value:
+                              type: integer
+                            status:
+                              type: string
+                            user_id:
+                              type: integer
+                              nullable: true
+        '404':
+          description: Produto não encontrado.
+        '500':
+          description: Erro interno do servidor.
+
+  /api/users/login:
+    post:
+      summary: Autentica um usuário
+      description: Realiza o login do usuário com email e senha e retorna um JSON Web Token (JWT) em caso de sucesso.
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: joao.silva@example.com
+                password:
+                  type: string
+                  format: password
+                  example: "senhaForte123"
+      responses:
+        '200':
+          description: Login bem-sucedido.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Login realizado com sucesso!
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: João da Silva
+                      email:
+                        type: string
+                        example: joao.silva@example.com
+        '400':
+          description: Email ou senha não fornecidos.
+        '401':
+          description: Não autorizado, credenciais inválidas.
+        '500':
+          description: Erro interno do servidor.
+
+  /api/users/register:
+    post:
+      summary: Registra um novo usuário
+      description: Cria uma nova conta de usuário com nome, email e senha. O email deve ser único.
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  example: João da Silva
+                email:
+                  type: string
+                  format: email
+                  example: joao.silva@example.com
+                password:
+                  type: string
+                  format: password
+                  example: "senhaForte123"
+      responses:
+        '201':
+          description: Usuário registrado com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Registro realizado com sucesso!
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: João da Silva
+                      email:
+                        type: string
+                        example: joao.silva@example.com
+        '400':
+          description: Dados inválidos ou email já cadastrado.
+        '500':
+          description: Erro interno do servidor.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,0 +1,888 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Site de Sorteio",
+    "description": "Documentação completa da API para o site de sorteios.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/admin/products/{id}/draw": {
+      "post": {
+        "summary": "Realiza o sorteio de um produto",
+        "description": "(Admin) Sorteia um número vencedor entre todos os números vendidos de um produto. Só funciona se o produto estiver 'ativo' e se todos os 101 números tiverem sido vendidos.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "O ID do produto a ser sorteado.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sorteio realizado com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Sorteio realizado com sucesso!"
+                    },
+                    "winningNumber": {
+                      "type": "integer"
+                    },
+                    "winningUserId": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado, não é um administrador."
+          },
+          "404": {
+            "description": "Produto não encontrado."
+          },
+          "409": {
+            "description": "Conflito. O sorteio não pode ser realizado (produto não está ativo ou nem todos os números foram vendidos).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/admin/products/{id}": {
+      "put": {
+        "summary": "Atualiza um produto existente (Admin)",
+        "description": "(Admin) Altera os detalhes de um produto específico.\n",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "O ID numérico do produto a ser atualizado.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Nova Rifa Incrível"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "Uma descrição atualizada para a rifa."
+                  },
+                  "price_per_number": {
+                    "type": "number",
+                    "format": "float",
+                    "example": 15.75
+                  },
+                  "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/nova_imagem.jpg"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "upcoming",
+                      "drawn",
+                      "cancelled"
+                    ],
+                    "example": "active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Produto atualizado com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Produto atualizado com sucesso"
+                    },
+                    "product": {
+                      "type": "object",
+                      "description": "Retorna o produto atualizado"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados de entrada inválidos."
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado, não é um administrador."
+          },
+          "404": {
+            "description": "Produto não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/admin/products": {
+      "post": {
+        "summary": "Cria um novo produto (sorteio)",
+        "description": "(Admin) Adiciona um novo produto e inicializa seus números de 0 a 100 como disponíveis.\n",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "price_per_number"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Rifa de um PlayStation 5"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "Concorra a um PS5 novinho em folha!"
+                  },
+                  "price_per_number": {
+                    "type": "number",
+                    "format": "float",
+                    "example": 25.5
+                  },
+                  "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/ps5.jpg"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Produto e números criados com sucesso."
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado, não é um administrador."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      },
+      "get": {
+        "summary": "Lista todos os produtos (Admin)",
+        "description": "(Admin) Retorna uma lista de todos os produtos cadastrados, independentemente do status.\n",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uma lista de todos os produtos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "price_per_number": {
+                            "type": "number",
+                            "format": "float"
+                          },
+                          "image_url": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "upcoming",
+                              "drawn",
+                              "cancelled"
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "winning_number": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "winner_user_id": {
+                            "type": "integer",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado, não é um administrador."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "Lista todos os usuários cadastrados (Admin)",
+        "description": "(Admin) Retorna uma lista de todos os usuários do sistema, incluindo seus IDs, nomes, emails e funções (roles).",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uma lista de usuários.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "admin"
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado, não é um administrador."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/orders/my-orders": {
+      "get": {
+        "summary": "Lista os pedidos e números comprados pelo usuário autenticado",
+        "description": "Retorna uma lista detalhada dos pedidos feitos pelo usuário, incluindo informações do produto, status do pedido e os números específicos comprados.",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uma lista de pedidos do usuário.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "order_id": {
+                            "type": "integer"
+                          },
+                          "product_id": {
+                            "type": "integer"
+                          },
+                          "order_date": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "total_amount": {
+                            "type": "number",
+                            "format": "float"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "Status do pedido (pending, completed, failed)"
+                          },
+                          "product": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "image_url": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Status do sorteio (do produto)"
+                              },
+                              "winning_number": {
+                                "type": "integer"
+                              }
+                            }
+                          },
+                          "purchasedNumbers": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "summary": "Finaliza uma compra e marca números como vendidos",
+        "description": "Esta API é chamada após um pagamento bem-sucedido (ex: retorno do Mercado Pago). Ela verifica a disponibilidade final dos números (considerando se já estão reservados/vendidos pelo mesmo usuário ou por outros). Se tudo estiver OK, marca os números como 'sold' e atualiza o pedido para 'completed' (se ainda não estiver).\n",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "productId",
+                  "selectedNumbers",
+                  "internalOrderId"
+                ],
+                "properties": {
+                  "productId": {
+                    "type": "integer",
+                    "description": "ID do produto."
+                  },
+                  "selectedNumbers": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Lista dos números selecionados."
+                  },
+                  "internalOrderId": {
+                    "type": "integer",
+                    "description": "O ID do pedido que foi previamente criado com status 'pending'."
+                  },
+                  "paymentDetails": {
+                    "type": "string",
+                    "description": "Detalhes do pagamento (ex: ID do pagamento do Mercado Pago).\n"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pedido finalizado com sucesso, números marcados como vendidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "orderId": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requisição inválida (dados faltando, etc.)."
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "404": {
+            "description": "Produto ou Pedido não encontrado."
+          },
+          "409": {
+            "description": "Conflito (um ou mais números selecionados não estão disponíveis para este usuário).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "unavailable_numbers": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "summary": "Retorna os detalhes de um produto específico e seus números",
+        "description": "Busca os detalhes de um produto pelo seu ID, juntamente com a lista completa de seus números e seus respectivos status (disponível, vendido, etc.).\n",
+        "tags": [
+          "Products"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "O ID numérico do produto.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do produto e a lista de números.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "product": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "price_per_number": {
+                          "type": "number"
+                        },
+                        "numbers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "number_value": {
+                                "type": "integer"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "user_id": {
+                                "type": "integer",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Produto não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "summary": "Lista todos os produtos ativos",
+        "description": "Retorna uma lista de todos os produtos que estão atualmente ativos e disponíveis para compra.\n",
+        "tags": [
+          "Products"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de produtos ativos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "price_per_number": {
+                            "type": "number",
+                            "format": "float"
+                          },
+                          "image_url": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "upcoming",
+                              "drawn",
+                              "cancelled"
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "winning_number": {
+                            "type": "integer",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/users/login": {
+      "post": {
+        "summary": "Autentica um usuário",
+        "description": "Realiza o login do usuário com email e senha e retorna um JSON Web Token (JWT) em caso de sucesso.\n",
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "joao.silva@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "senhaForte123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login bem-sucedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Login realizado com sucesso!"
+                    },
+                    "token": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "João da Silva"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "joao.silva@example.com"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email ou senha não fornecidos."
+          },
+          "401": {
+            "description": "Não autorizado, credenciais inválidas."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/users/register": {
+      "post": {
+        "summary": "Registra um novo usuário",
+        "description": "Cria uma nova conta de usuário com nome, email e senha. O email deve ser único.\n",
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "João da Silva"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "joao.silva@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "senhaForte123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário registrado com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Registro realizado com sucesso!"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "João da Silva"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "joao.silva@example.com"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou email já cadastrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "tags": []
+}
