@@ -4,8 +4,8 @@
 import { useEffect, useState, Suspense } from 'react'; // Adicionado Suspense
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Spinner from 'components/Spinner'; // Ajuste o caminho se necessário
-import { useAuth } from 'context/AuthContext'; // Ajuste o caminho se necessário
+import Spinner from '../../../components/Spinner'; // Ajuste o caminho se necessário
+import { useAuth } from '../../../context/AuthContext'; // Ajuste o caminho se necessário
 
 // Componente interno que usa useSearchParams
 function PendingContent() {
@@ -90,7 +90,7 @@ function PendingContent() {
 export default function PaymentPendingPage() {
   // Este componente pai agora só envolve o PendingContent com Suspense
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+    <div className="flex flex-col items-center justify-center  p-4 bg-gray-50">
       <Suspense fallback={
         <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow-xl max-w-md w-full">
           <Spinner size="h-10 w-10 text-yellow-500" />

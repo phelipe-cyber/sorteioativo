@@ -2,10 +2,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from 'context/AuthContext'; // Ajuste o caminho se necessário
+import { useAuth } from '../../context/AuthContext'; // Ajuste o caminho se necessário
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Spinner from 'components/Spinner'; // Ajuste o caminho se necessário
+import Spinner from '../../components/Spinner'; // Ajuste o caminho se necessário
 
 // Ícones para visualização de senha (copiados da página de admin)
 const IconEye = () => (

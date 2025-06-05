@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 // import { GeistSans } from "geist/font/sans"; // Removido se não usado
 // import { GeistMono } from "geist/font/mono"; // Removido se não usado
 import "./globals.css";
-import { AuthProvider } from "context/AuthContext"; // Ajuste o caminho se necessário
-import Header from "components/Header";       // Ajuste o caminho se necessário
+import { AuthProvider } from "../context/AuthContext"; // Ajuste o caminho se necessário
+import Header from "../components/Header";       // Ajuste o caminho se necessário
 
 // Se GeistSans e GeistMono não são usados, não precisa adicioná-los às classes do body
 // const inter = Inter({ subsets: ["latin"] }); // Exemplo se fosse usar Inter

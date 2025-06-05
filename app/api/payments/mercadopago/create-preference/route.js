@@ -1,9 +1,9 @@
 // app/api/payments/mercadopago/create-preference/route.js
 import { NextResponse } from 'next/server';
-import mpClient from 'lib/mercadopago';
+import mpClient from '../../../../lib/mercadopago';
 import { Preference } from 'mercadopago';
-import { dbPool } from '../../../lib/db';
-import { verifyAuth } from 'lib/authMiddleware';
+import { dbPool } from '../../../../lib/db';
+import { verifyAuth } from '../../../../lib/authMiddleware';
 
 export async function POST(request) {
   console.log('API create-preference: Iniciando criação de preferência (lógica de indisponibilidade ajustada)...');

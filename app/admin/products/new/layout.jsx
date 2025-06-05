@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useAuth } from 'context/AuthContext'; // Ajuste o caminho conforme necessário
+import { useAuth } from '../../../../context/AuthContext'; // Ajuste o caminho conforme necessário
 import { useRouter } from 'next/navigation';
 // import AdminSidebar from 'components/AdminSidebar'; // Ajuste o caminho
 import { useState } from 'react';

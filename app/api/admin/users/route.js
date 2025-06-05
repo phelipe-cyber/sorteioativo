@@ -1,7 +1,7 @@
 // app/api/admin/users/route.js
 import { NextResponse } from 'next/server';
 import { query } from '../../../lib/db'; // Ajuste o caminho se necessário
-import { verifyAdminAuth } from 'lib/adminAuthMiddleware'; // Ajuste o caminho se necessário
+import { verifyAdminAuth } from '../../../lib/adminAuthMiddleware'; // Ajuste o caminho se necessário
 
 /**
  * @swagger

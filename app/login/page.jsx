@@ -144,7 +144,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     // Wrapper da página
-    <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className=" flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <Suspense fallback={<div className="flex justify-center items-center h-64"><Spinner size="h-10 w-10 text-indigo-600" /> <p className="ml-3">Carregando formulário...</p></div>}>
         <LoginForm />
       </Suspense>

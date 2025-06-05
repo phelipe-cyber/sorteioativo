@@ -1,7 +1,7 @@
 // app/api/admin/products/route.js
 
 import { NextResponse } from 'next/server';
-import { query,dbPool } from '../../../../../../lib/db';
+import { query,dbPool } from '../../../lib/db';
 import { verifyAdminAuth } from '../../../lib/adminAuthMiddleware';
 
 /**

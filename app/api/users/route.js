@@ -1,7 +1,7 @@
 // app/api/admin/users/route.js
 import { NextResponse } from 'next/server';
-import { query, dbPool } from '../../../lib/db'; // Adicionado dbPool para consistência, embora query simples possa ser usada
-import { verifyAdminAuth } from 'lib/adminAuthMiddleware';
+import { query, dbPool } from '../../lib/db'; // Adicionado dbPool para consistência, embora query simples possa ser usada
+import { verifyAdminAuth } from '../../lib/adminAuthMiddleware';
 import bcrypt from 'bcrypt';
 
 /**

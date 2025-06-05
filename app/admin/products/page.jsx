@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from 'context/AuthContext'; // Ajuste o caminho
+import { useAuth } from '../../../context/AuthContext'; // Ajuste o caminho
 import Link from 'next/link';
-import Spinner from 'components/Spinner'; // Ajuste o caminho
+import Spinner from '../../../components/Spinner'; // Ajuste o caminho
 
 // Ícone SVG para Editar (reutilizado da página de usuários)
 const IconEdit = () => (
