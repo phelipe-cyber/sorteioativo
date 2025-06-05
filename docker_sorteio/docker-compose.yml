@@ -43,7 +43,7 @@ services:
       - /app/node_modules
     command: npm run dev
     env_file:
-      - ../.env.local # Carrega as variáveis de ambiente do seu arquivo .env.local
+      - .env.local # Carrega as variáveis de ambiente do seu arquivo .env.local
     restart: unless-stopped
     depends_on:
       db:
