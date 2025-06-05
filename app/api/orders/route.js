@@ -84,17 +84,17 @@ export async function POST(request) {
   if (!authResult.isAuthenticated) {
     return authResult.error;
   }
-  const userId = authResult.payload.id; // ID do usuário que está fazendo a compra
+  const userId = authResult.payload.id; 
 
   let connection;
   try {
-    const { productId, selectedNumbers, internalOrderId, paymentDetails } = await request.json();
+    const { internalOrderId, paymentDetails } = await request.json();
 
-    console.log('API /api/orders: Dados recebidos:', { productId, selectedNumbers, internalOrderId, userId, paymentDetails });
+    console.log('API /api/orders: Dados recebidos:', { internalOrderId, userId, paymentDetails });
 
-    if (!productId || !selectedNumbers || !Array.isArray(selectedNumbers) || selectedNumbers.length === 0 || !internalOrderId) {
-      console.error('API /api/orders: Dados da requisição incompletos.');
-      return new NextResponse(JSON.stringify({ message: 'Dados da requisição incompletos (productId, selectedNumbers, internalOrderId são obrigatórios).' }), {
+    if (!internalOrderId) {
+      console.error('API /api/orders: internalOrderId é obrigatório.');
+      return new NextResponse(JSON.stringify({ message: 'ID do pedido interno (internalOrderId) é obrigatório.' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -103,97 +103,101 @@ export async function POST(request) {
     await connection.beginTransaction();
     console.log('API /api/orders: Transação iniciada.');
 
-    // 1. Verificar o status do pedido interno. Ele deve existir e estar 'pending' ou já 'completed' (pelo webhook)
+    // 1. Buscar o pedido pendente e seu productId
     const [orderRows] = await connection.execute(
-      "SELECT status, total_amount FROM orders WHERE id = ? AND user_id = ?",
+      "SELECT id, product_id, status, total_amount FROM orders WHERE id = ? AND user_id = ? FOR UPDATE", // FOR UPDATE
       [internalOrderId, userId]
     );
 
     if (orderRows.length === 0) {
       await connection.rollback();
-      console.error(`API /api/orders: Pedido ID ${internalOrderId} não encontrado para o usuário ${userId}.`);
+      console.error(`API /api/orders: Pedido pendente ID ${internalOrderId} não encontrado para o usuário ${userId}.`);
       return new NextResponse(JSON.stringify({ message: `Pedido ${internalOrderId} não encontrado ou não pertence a este usuário.` }), {
         status: 404, headers: { 'Content-Type': 'application/json' },
       });
     }
     const currentOrder = orderRows[0];
-    console.log(`API /api/orders: Status atual do pedido ${internalOrderId}: ${currentOrder.status}`);
+    const productId = currentOrder.product_id; // Obtido do pedido
+    console.log(`API /api/orders: Pedido ${internalOrderId} encontrado. Produto ID: ${productId}, Status atual: ${currentOrder.status}`);
 
-    // Se o pedido já foi marcado como 'completed' (provavelmente pelo webhook),
-    // podemos apenas retornar sucesso ou verificar se os números já foram marcados como 'sold'.
-    // Por ora, vamos permitir o processamento para garantir que os números sejam marcados como 'sold' se ainda não foram.
-    // Uma lógica mais robusta aqui poderia evitar reprocessamento desnecessário.
+    // Se o pedido já foi 'completed' (pelo webhook, por exemplo), não fazer nada ou apenas retornar sucesso.
+    if (currentOrder.status === 'completed') {
+        await connection.commit(); // Finaliza a transação sem fazer mais nada
+        console.log(`API /api/orders: Pedido ${internalOrderId} já está 'completed'. Nenhuma ação adicional tomada.`);
+        return NextResponse.json({ message: 'Pedido já finalizado anteriormente.', orderId: internalOrderId }, { status: 200 });
+    }
+    // Se não estiver 'pending', é um estado inesperado para esta API de finalização
+    if (currentOrder.status !== 'pending') {
+        await connection.rollback();
+        console.error(`API /api/orders: Pedido ${internalOrderId} não está com status 'pending'. Status atual: ${currentOrder.status}.`);
+        return new NextResponse(JSON.stringify({ message: `Pedido ${internalOrderId} não pode ser finalizado pois não está pendente.` }), {
+            status: 409, headers: { 'Content-Type': 'application/json' }, // Conflict
+        });
+    }
 
-    // 2. Verificar disponibilidade dos números NA TABELA RAFFLE_NUMBERS
-    // Um número é indisponível se:
-    //    a) status = 'sold' (já vendido para qualquer um)
-    //    b) status = 'reserved' E user_id != userId (reservado por outro usuário)
-    const placeholders = selectedNumbers.map(() => '?').join(',');
-    const [numberStatusRows] = await connection.execute(
+
+    // 2. Buscar os números que foram RESERVADOS para este pedido
+    const [reservedNumbersRows] = await connection.execute(
       `SELECT number_value, status, user_id 
        FROM raffle_numbers 
-       WHERE product_id = ? AND number_value IN (${placeholders}) FOR UPDATE`,
-      [productId, ...selectedNumbers]
+       WHERE order_id = ? AND product_id = ? AND status = 'reserved' AND user_id = ? FOR UPDATE`,
+      [internalOrderId, productId, userId]
     );
 
-    if (numberStatusRows.length !== selectedNumbers.length) {
-      await connection.rollback();
-      console.error('API /api/orders: Um ou mais números selecionados não existem para este produto na tabela raffle_numbers.');
-      return new NextResponse(JSON.stringify({ message: 'Um ou mais números selecionados são inválidos.' }), { status: 400, headers: { 'Content-Type': 'application/json' }});
-    }
-
-    const trulyUnavailableNumbers = [];
-    for (const numInfo of numberStatusRows) {
-      if (numInfo.status === 'sold') {
-        trulyUnavailableNumbers.push(numInfo.number_value);
-      } else if (numInfo.status === 'reserved' && numInfo.user_id !== userId) {
-        trulyUnavailableNumbers.push(numInfo.number_value);
+    if (reservedNumbersRows.length === 0) {
+      // Isso pode acontecer se o webhook já processou e converteu para 'sold',
+      // ou se a reserva falhou/expirou e foram liberados.
+      // Se o pedido ainda está 'pending' aqui, é um problema.
+      // Vamos verificar o status do pedido novamente. Se ainda pending, mas sem números reservados, é um erro.
+      const [checkOrderAgain] = await connection.execute("SELECT status FROM orders WHERE id = ?", [internalOrderId]);
+      if (checkOrderAgain.length > 0 && checkOrderAgain[0].status === 'pending') {
+        await connection.rollback();
+        console.error(`API /api/orders: Nenhum número reservado encontrado para o pedido pendente ${internalOrderId}, mas o pedido ainda está pendente.`);
+        return new NextResponse(JSON.stringify({ message: 'Nenhum número reservado encontrado para este pedido pendente. A reserva pode ter expirado ou houve um erro.' }), 
+            { status: 409, headers: { 'Content-Type': 'application/json' }});
       }
-      // Se status === 'available', está OK.
-      // Se status === 'reserved' AND user_id === userId, está OK (o usuário está confirmando sua própria reserva).
+      // Se o pedido não está mais pending, o webhook pode ter processado.
+      console.warn(`API /api/orders: Nenhum número reservado encontrado para o pedido ${internalOrderId}. O webhook pode já ter processado.`);
+      // Não é necessariamente um erro fatal aqui, pois o webhook pode ter concluído.
+      // Apenas atualizaremos o pedido para 'completed' se ainda não estiver.
+    }
+    
+    const selectedNumbersFromReservation = reservedNumbersRows.map(n => n.number_value);
+    console.log(`API /api/orders: Números reservados encontrados para pedido ${internalOrderId}:`, selectedNumbersFromReservation);
+
+
+    // 3. Marcar os números reservados como 'sold'
+    if (selectedNumbersFromReservation.length > 0) {
+        const placeholders = selectedNumbersFromReservation.map(() => '?').join(',');
+        const [updateNumbersResult] = await connection.execute(
+        `UPDATE raffle_numbers 
+         SET status = 'sold', reserved_at = NULL 
+         WHERE product_id = ? AND order_id = ? AND user_id = ? AND status = 'reserved' AND number_value IN (${placeholders})`,
+        [productId, internalOrderId, userId, ...selectedNumbersFromReservation]
+        );
+        console.log(`API /api/orders: ${updateNumbersResult.affectedRows} números marcados/confirmados como 'sold' para o pedido ${internalOrderId}.`);
+        if (updateNumbersResult.affectedRows !== selectedNumbersFromReservation.length) {
+            console.warn(`API /api/orders: Discrepância ao marcar números como 'sold'. Esperado: ${selectedNumbersFromReservation.length}, Atualizado: ${updateNumbersResult.affectedRows}. Isso pode ser ok se alguns já foram marcados.`);
+        }
+    } else if (currentOrder.status === 'pending'){ // Se o pedido está pendente mas não encontramos números reservados
+        // Isso pode indicar um problema na lógica de reserva ou que o webhook já liberou os números por falha no pagamento
+        // e esta chamada à /api/orders é tardia.
+        console.warn(`API /api/orders: Pedido ${internalOrderId} está pendente, mas não foram encontrados números reservados para ele. Verifique o fluxo de webhook e reserva.`);
+        // Não vamos impedir a finalização do pedido se o webhook já o atualizou para 'completed',
+        // mas se ele ainda estiver 'pending' e não acharmos números reservados, é um problema.
+        // O webhook é a fonte de verdade para a transição de 'reserved' para 'sold' ou 'available'.
+        // Esta API /api/orders atua mais como uma confirmação/finalização do lado do cliente.
     }
 
-    if (trulyUnavailableNumbers.length > 0) {
-      await connection.rollback();
-      console.error(`API /api/orders: Números indisponíveis para o usuário ${userId}: ${trulyUnavailableNumbers.join(', ')}`);
-      return new NextResponse(
-        JSON.stringify({ 
-          message: `Os seguintes números não estão mais disponíveis para você: ${trulyUnavailableNumbers.join(', ')}. Outro usuário pode ter comprado ou reservado.`,
-          unavailable_numbers: trulyUnavailableNumbers 
-        }), 
-        { status: 409, headers: { 'Content-Type': 'application/json' }}
-      );
-    }
 
-    // 3. Se todos os números selecionados estão disponíveis (ou reservados pelo próprio usuário),
-    // marcar/atualizar os números como 'sold' e associar ao pedido e usuário.
-    // Esta query atualiza números que estavam 'available' OU 'reserved' (pelo mesmo usuário e para este pedido).
-    const [updateNumbersResult] = await connection.execute(
-      `UPDATE raffle_numbers 
-       SET status = 'sold', user_id = ?, order_id = ?, reserved_at = NULL 
-       WHERE product_id = ? AND number_value IN (${placeholders}) AND (status = 'available' OR (status = 'reserved' AND user_id = ? AND order_id = ?))`,
-      [userId, internalOrderId, productId, ...selectedNumbers, userId, internalOrderId]
-    );
-
-    if (updateNumbersResult.affectedRows !== selectedNumbers.length) {
-      // Isso pode acontecer se alguns números já estavam 'sold' para este usuário/pedido,
-      // ou se a condição de reserva não bateu para todos. É uma situação complexa.
-      // Idealmente, a API de create-preference já reservou, e aqui só mudamos de 'reserved' para 'sold'.
-      // Se o webhook já processou e marcou como 'sold', affectedRows pode ser 0 aqui, o que é OK.
-      console.warn(`API /api/orders: Affected rows ao marcar como 'sold' (${updateNumbersResult.affectedRows}) diferente do esperado (${selectedNumbers.length}). Pode ser ok se já processado pelo webhook.`);
-      // Não vamos dar rollback por isso, pois o pagamento foi aprovado.
-      // Apenas logamos. A verificação de disponibilidade anterior é mais crítica.
-    }
-    console.log(`API /api/orders: ${updateNumbersResult.affectedRows} números marcados/confirmados como 'sold' para o pedido ${internalOrderId}.`);
-
-    // 4. Atualizar o status do pedido para 'completed' (se ainda não estiver)
-    // e adicionar detalhes do pagamento se fornecidos.
+    // 4. Atualizar o status do pedido para 'completed'
     let updateOrderQuery = "UPDATE orders SET status = 'completed'";
     const queryParams = [];
-    if (paymentDetails) {
-      updateOrderQuery += ", payment_details = CONCAT_WS('\\n', payment_details, ?)";
-      queryParams.push(paymentDetails);
-    }
+    const paymentInfoString = paymentDetails || `Finalizado via /api/orders em ${new Date().toISOString()}`;
+    
+    updateOrderQuery += ", payment_details = CONCAT_WS('\\n', payment_details, ?)";
+    queryParams.push(paymentInfoString);
+    
     updateOrderQuery += " WHERE id = ? AND user_id = ?";
     queryParams.push(internalOrderId, userId);
     

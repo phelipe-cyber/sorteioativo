@@ -42,6 +42,9 @@ function SuccessContent() {
       setIsLoadingPage(false);
       return;
     }
+    
+    setMessage(`Pagamento para o pedido ${orderId} aprovado (Status MP: ${status}, ID Pagamento MP: ${paymentId})! Seus números foram registrados.`);
+    setIsLoadingPage(false);
 
     const finalizeOrderInSystem = async () => {
       setIsLoadingPage(true);
