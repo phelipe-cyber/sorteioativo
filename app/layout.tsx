@@ -28,6 +28,9 @@ export default function RootLayout({
             {children}
           </main>
           {/* Footer opcional */}
+          { <footer className="bg-gray-800 text-white text-center p-4">
+            © {new Date().getFullYear()} Site de Sorteios. Todos os direitos reservados.
+          </footer> }
         </AuthProvider>
       </body>
     </html>
