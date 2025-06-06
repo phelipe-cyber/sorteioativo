@@ -2,9 +2,9 @@
 'use client';
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '../../../context/AuthContext'; // Ajuste o caminho
+import { useAuth } from '@/context/AuthContext'; // Ajuste o caminho
 import Link from 'next/link';
-import Spinner from '../../../components/Spinner'; // Ajuste o caminho
+import Spinner from '@/components/Spinner'; // Ajuste o caminho
 
 // Componente interno que usa useSearchParams
 function SuccessContent() {

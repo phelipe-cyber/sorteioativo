@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useAuth } from '../../context/AuthContext'; // Ajuste o caminho se necessário
+import { useAuth } from '@/context/AuthContext'; // Ajuste o caminho se necessário
 import Link from 'next/link';
-import Spinner from '../../components/Spinner'; // Ajuste o caminho se necessário
+import Spinner from '@/components/Spinner'; // Ajuste o caminho se necessário
 import { useRouter, useSearchParams } from 'next/navigation';
 
 // Ícones para visualização de senha

@@ -1,8 +1,8 @@
 // app/api/payments/mercadopago/webhook/route.js
 import { NextResponse } from 'next/server';
-import mpClient from '../../../../lib/mercadopago'; // Ajuste o caminho se necessário
+import mpClient from '@/app/lib/mercadopago'; // Ajuste o caminho se necessário
 import { Payment } from 'mercadopago'; // Ajuste o caminho se necessário
-import { dbPool } from '../../../../lib/db'; // Ajuste o caminho se necessário
+import { dbPool } from '@/app/lib/db'; // Ajuste o caminho se necessário
 import crypto from 'crypto';
 
 const WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET;

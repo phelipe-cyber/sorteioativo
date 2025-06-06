@@ -1,8 +1,8 @@
 // app/api/orders/my-orders/route.js
 
 import { NextResponse } from 'next/server';
-import { query } from '../../../lib/db'; // Ajuste o caminho se necessário
-import { verifyAuth } from '../../../lib/authMiddleware'; // Ajuste o caminho se necessário
+import { query } from '@/app/lib/db'; // Ajuste o caminho se necessário
+import { verifyAuth } from '@/app/lib/authMiddleware'; // Ajuste o caminho se necessário
 
 /**
  * @swagger

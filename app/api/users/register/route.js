@@ -1,7 +1,7 @@
 // app/api/users/register/route.js
 
 import { NextResponse } from 'next/server';
-import { query } from '../../../lib/db';
+import { query } from '@/app/lib/db';
 import bcrypt from 'bcrypt';
 
 /**

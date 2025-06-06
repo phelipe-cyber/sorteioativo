@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../../context/AuthContext'; 
+import { useAuth } from '@/context/AuthContext'; 
 import { useRouter } from 'next/navigation';
-import Spinner from '../../../../components/Spinner'; 
+import Spinner from '@/components/Spinner'; 
 import Link from 'next/link'; 
 
 const IconArrowLeft = () => (
@@ -16,22 +16,24 @@ const IconArrowLeft = () => (
 
 export default function AdminCreateProductPage() {
   const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
-  const router = useRouter(); 
+  const router = useRouter();
 
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [pricePerNumber, setPricePerNumber] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  // --- NOVO ESTADO PARA A QUANTIDADE DE NÚMEROS ---
+  const [totalNumbers, setTotalNumbers] = useState(''); 
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Proteção de rota já é feita pelo AdminLayout, mas pode manter como dupla checagem se desejar.
+  // Proteção de rota
   useEffect(() => {
     if (!authLoading) { 
       if (!isAuthenticated || user?.role !== 'admin') {
-        // router.push('/login'); // Se AdminLayout já faz, isso pode ser redundante ou causar loop
+        router.push('/login');
       }
     }
   }, [user, authLoading, isAuthenticated, router]);
@@ -44,13 +46,20 @@ export default function AdminCreateProductPage() {
     setIsLoading(true);
 
     if (!token) {
-      setError('Você não está autenticado ou seu token é inválido.');
-      setIsLoading(false);
-      return;
+        setError('Você não está autenticado.');
+        setIsLoading(false);
+        return;
     }
 
-    if (!productName.trim() || !pricePerNumber.trim()) {
-        setError('Nome do produto e preço por número são obrigatórios.');
+    // --- VALIDAÇÃO DOS CAMPOS ---
+    if (!productName.trim() || !pricePerNumber.trim() || !totalNumbers.trim()) {
+        setError('Nome, preço por número e último número são obrigatórios.');
+        setIsLoading(false);
+        return;
+    }
+    const numTotalNumbers = parseInt(totalNumbers);
+    if (isNaN(numTotalNumbers) || numTotalNumbers < 1 || numTotalNumbers > 10000) { // Exemplo de limite
+        setError('O último número deve ser um valor entre 1 e 10.000.');
         setIsLoading(false);
         return;
     }
@@ -60,6 +69,7 @@ export default function AdminCreateProductPage() {
         return;
     }
 
+
     try {
       const response = await fetch('/api/admin/products', {
         method: 'POST',
@@ -67,11 +77,13 @@ export default function AdminCreateProductPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        // --- ADICIONADO total_numbers AO CORPO DA REQUISIÇÃO ---
         body: JSON.stringify({
           name: productName,
           description: description,
           price_per_number: parseFloat(pricePerNumber),
           image_url: imageUrl,
+          total_numbers: numTotalNumbers, 
         }),
       });
 
@@ -81,11 +93,14 @@ export default function AdminCreateProductPage() {
         throw new Error(data.message || 'Falha ao criar o produto.');
       }
 
-      setSuccessMessage(`Produto "${productName}" (ID: ${data.productId}) criado com sucesso!`);
+      setSuccessMessage(`Produto "${productName}" (ID: ${data.productId}) criado com sucesso com números de 0 a ${numTotalNumbers}!`);
+      // Limpar o formulário
       setProductName('');
       setDescription('');
       setPricePerNumber('');
       setImageUrl('');
+      setTotalNumbers('100'); // Reset para o padrão
+
     } catch (err) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
     } finally {
@@ -93,10 +108,9 @@ export default function AdminCreateProductPage() {
     }
   };
   
-  // Se AdminLayout já mostra um loader, este pode ser simplificado ou removido.
   if (authLoading || !isAuthenticated || user?.role !== 'admin') {
     return (
-        <div className="flex flex-col items-center justify-center h-full"> {/* h-full para ocupar altura do main */}
+        <div className="flex flex-col items-center justify-center h-full">
             <Spinner size="h-10 w-10" />
             <p className="mt-4 text-gray-600">Verificando acesso...</p>
         </div>
@@ -104,13 +118,7 @@ export default function AdminCreateProductPage() {
   }
 
   return (
-    // Wrapper da página para centralizar o card do formulário DENTRO do <main> do AdminLayout
-    // w-full para ocupar a largura do <main>
-    // h-full (opcional) para tentar ocupar a altura do <main> e permitir centralização vertical
-    // flex flex-col items-center justify-center para centralizar o card
-    // O padding (py-X, px-X) pode vir do <main> do AdminLayout ou ser adicionado aqui se necessário.
-    <div className="w-full flex flex-col items-center justify-start pt-8 md:pt-12"> {/* justify-start e pt para não ficar colado no topo se o conteúdo for pequeno */}
-      {/* Card do formulário */}
+    <div className="w-full flex flex-col items-center justify-start pt-8 md:pt-12">
       <div className="bg-white p-6 sm:p-10 rounded-xl shadow-2xl max-w-2xl w-full">
         <div className="mb-6">
           <Link href="/admin/dashboard" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium group">
@@ -122,60 +130,51 @@ export default function AdminCreateProductPage() {
           Cadastrar Novo Produto de Sorteio
         </h1>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Campos do formulário como na versão anterior */}
           <div>
             <label htmlFor="productName" className="block text-sm font-medium text-gray-700 mb-1.5">Nome do Produto/Sorteio <span className="text-red-500">*</span></label>
             <input
-              type="text"
-              id="productName"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-              required
-              disabled={isLoading}
-              placeholder="Ex: Rifa de um Smartphone XPTO"
+              type="text" id="productName" value={productName} onChange={(e) => setProductName(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              required disabled={isLoading} placeholder="Ex: Rifa de um Smartphone XPTO"
             />
           </div>
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
             <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-              rows="4"
-              disabled={isLoading}
-              placeholder="Detalhes sobre o produto, regras do sorteio, etc."
+              id="description" value={description} onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              rows="4" disabled={isLoading} placeholder="Detalhes sobre o produto, regras do sorteio, etc."
             />
           </div>
 
-          <div>
-            <label htmlFor="pricePerNumber" className="block text-sm font-medium text-gray-700 mb-1.5">Preço por Número (R$) <span className="text-red-500">*</span></label>
-            <input
-              type="number"
-              id="pricePerNumber"
-              value={pricePerNumber}
-              onChange={(e) => setPricePerNumber(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-              required
-              step="0.01" 
-              min="0.01"
-              disabled={isLoading}
-              placeholder="Ex: 10.00"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+                <label htmlFor="pricePerNumber" className="block text-sm font-medium text-gray-700 mb-1.5">Preço por Número (R$) <span className="text-red-500">*</span></label>
+                <input
+                type="number" id="pricePerNumber" value={pricePerNumber} onChange={(e) => setPricePerNumber(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required step="0.01" min="0.01" disabled={isLoading} placeholder="Ex: 10.00"
+                />
+            </div>
+            {/* --- NOVO CAMPO PARA QUANTIDADE DE NÚMEROS --- */}
+            <div>
+                <label htmlFor="totalNumbers" className="block text-sm font-medium text-gray-700 mb-1.5">Último Número do Sorteio <span className="text-red-500">*</span></label>
+                <input
+                type="number" id="totalNumbers" value={totalNumbers} onChange={(e) => setTotalNumbers(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required min="1" disabled={isLoading} placeholder="Ex: 100"
+                />
+                <p className="text-xs text-gray-500 mt-1">Isso criará números de 0 até o valor digitado.</p>
+            </div>
           </div>
 
           <div>
             <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1.5">URL da Imagem (opcional)</label>
             <input
-              type="url"
-              id="imageUrl"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-              disabled={isLoading}
-              placeholder="https://exemplo.com/imagem.jpg"
+              type="url" id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={isLoading} placeholder="https://exemplo.com/imagem.jpg"
             />
           </div>
 

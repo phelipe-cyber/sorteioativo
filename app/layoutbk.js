@@ -1,6 +1,6 @@
 // app/layout.js
-import { AuthProvider } from '../context/AuthContext'; // Ajuste o caminho se necessário
-import Header from '../components/Header'; // Ajuste o caminho se necessário
+import { AuthProvider } from '@/context/AuthContext'; // Ajuste o caminho se necessário
+import Header from '@/components/Header'; // Ajuste o caminho se necessário
 import './globals.css'; // Seu CSS global
 
 export const metadata = {
@@ -11,7 +11,6 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-br" className="h-full bg-white">
-      {/* Removido bg-gray-100 do body para um fundo branco padrão */}
       <body className="h-full flex flex-col"> 
         <AuthProvider>
           <Header /> 

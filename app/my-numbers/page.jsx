@@ -2,10 +2,10 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Spinner from '../../components/Spinner';
+import Spinner from '@/components/Spinner';
 
 // Ícone de Seta para a Esquerda
 const ArrowLeftIcon = () => (

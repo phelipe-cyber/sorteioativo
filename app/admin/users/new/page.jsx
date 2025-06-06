@@ -2,9 +2,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '../../../../context/AuthContext'; // Ajuste o caminho
+import { useAuth } from '@/context/AuthContext'; // Ajuste o caminho
 import { useRouter } from 'next/navigation';
-import Spinner from '../../../../components/Spinner'; // Ajuste o caminho
+import Spinner from '@/components/Spinner'; // Ajuste o caminho
 import Link from 'next/link';
 
 const IconArrowLeft = () => (

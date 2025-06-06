@@ -1,7 +1,7 @@
 // app/api/orders/route.js
 import { NextResponse } from 'next/server';
-import { dbPool } from '../../lib/db'; // Usaremos dbPool para transações
-import { verifyAuth } from '../../lib/authMiddleware';
+import { dbPool } from '@/app/lib/db'; // Usaremos dbPool para transações
+import { verifyAuth } from '@/app/lib/authMiddleware';
 
 /**
  * @swagger

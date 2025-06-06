@@ -1,8 +1,8 @@
 // app/api/admin/products/[id]/draw/route.js
 
 import { NextResponse } from 'next/server';
-import { dbPool } from '../../../../../lib/db'; // Ajuste o caminho se necessário
-import { verifyAdminAuth } from '../../../../../lib/adminAuthMiddleware'; // Ajuste o caminho se necessário
+import { dbPool } from '@/app/lib/db'; // Ajuste o caminho se necessário
+import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware'; // Ajuste o caminho se necessário
 
 /**
  * @swagger

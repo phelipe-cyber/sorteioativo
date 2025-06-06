@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 // Não precisamos mais do useRouter aqui para redirecionar para login imediatamente
 

@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../context/AuthContext'; 
+import { useAuth } from '@/context/AuthContext'; 
 import Link from 'next/link'; // Importar Link
-import Spinner from '../../../components/Spinner'; 
+import Spinner from '@/components/Spinner'; 
 
 // Ícones SVG
 const IconUserPlus = () => (

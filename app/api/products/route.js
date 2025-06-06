@@ -1,7 +1,7 @@
 // app/api/products/route.js
 
 import { NextResponse } from 'next/server';
-import { query } from '../../lib/db'; // Ajuste o caminho se necessário
+import { query } from '@/app/lib/db'; // Ajuste o caminho se necessário
 
 /**
  * @swagger

@@ -4,8 +4,8 @@
 import { useEffect, useState, Suspense } from 'react'; // Adicionado Suspense
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Spinner from '../../../components/Spinner'; // Ajuste o caminho se necessário
-import { useAuth } from '../../../context/AuthContext'; // Ajuste o caminho se necessário
+import Spinner from '@/components/Spinner'; // Ajuste o caminho se necessário
+import { useAuth } from '@/context/AuthContext'; // Ajuste o caminho se necessário
 
 // Componente interno que usa useSearchParams
 function PendingContent() {
