@@ -137,7 +137,7 @@ export default function AdminEditProductPage() {
 
       setSuccessMessage(`Produto ID ${productId} "${productName}" atualizado com sucesso!`);
       // Opcional: redirecionar após um tempo
-      // setTimeout(() => router.push('/admin/products'), 2000);
+      setTimeout(() => router.push('/admin/products'), 2000);
 
     } catch (err) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
