@@ -50,15 +50,16 @@ import { query } from '@/app/lib/db'; // Ajuste o caminho se necessário
  */
 
 
-export async function GET() { // Removido o parâmetro 'request' não utilizado
+export async function GET() {
   try {
     const products = await query({
-      query: "SELECT id, name, description, price_per_number, image_url, status FROM products WHERE status = 'active'",
+      // --- CORREÇÃO AQUI: Adicionado 'prize_type' à consulta SQL ---
+      query: "SELECT id, name, description, price_per_number, image_url, status, prize_type FROM products WHERE status = 'active'",
       values: [],
     });
 
     return NextResponse.json({ products });
-  } catch (error) { // Padronizado para 'error'
+  } catch (error) {
     console.error("Erro ao listar produtos (API /api/products):", error);
     return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao listar produtos.'}), { 
         status: 500,
@@ -66,5 +67,3 @@ export async function GET() { // Removido o parâmetro 'request' não utilizado
     });
   }
 }
-
-

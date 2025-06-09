@@ -32,6 +32,28 @@ const IconProductPlus = () => (
     </svg>
 );
 
+const Notification = ({ title, message, type, onDismiss }) => {
+  const isError = type === 'error';
+  const bgColor = isError ? 'bg-red-50' : 'bg-green-50';
+  const borderColor = isError ? 'border-red-200' : 'border-green-200';
+  const textColor = isError ? 'text-red-800' : 'text-green-800';
+  const iconColor = isError ? 'text-red-500' : 'text-green-500';
+  
+  return (
+    <div className={`flex items-start justify-between gap-4 p-4 mb-6 rounded-lg border ${bgColor} ${borderColor} shadow-md`}>
+      <div className="flex items-start gap-3">
+        <div className={`flex-shrink-0 ${iconColor}`}>
+          {isError ? <IconAlertCircle /> : <IconCheckCircle />}
+        </div>
+        <div className={`text-sm ${textColor}`}>
+          <p className="font-semibold">{title}</p>
+          <p>{message}</p>
+        </div>
+      </div>
+      <button onClick={onDismiss} className={`text-2xl font-bold opacity-70 hover:opacity-100 ${textColor}`} aria-label="Fechar notificação">&times;</button>
+    </div>
+  );
+};
 
 export default function AdminProductsListPage() {
   const { token } = useAuth();
@@ -138,20 +160,26 @@ export default function AdminProductsListPage() {
         </Link>
       </div>
 
-      {drawError && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-          Erro ao sortear produto ID {drawError.productId}: {drawError.message}
-        </div>
+{/* --- RENDERIZAÇÃO DA NOTIFICAÇÃO MELHORADA --- */}
+{drawError && (
+        <Notification 
+          type="error"
+          title="Ocorreu um Erro"
+          message={`Ao sortear produto ID ${drawError.productId}: ${drawError.message}`}
+          onDismiss={() => setDrawError(null)}
+        />
       )}
       {drawResult && (
-        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
-          {drawResult.message} Produto ID: {drawResult.productId}. Número Sorteado: <strong>{String(drawResult.winningNumber).padStart(2,'0')}</strong> (Usuário ID: {drawResult.winningUserId}).
-        </div>
+        <Notification 
+          type="success"
+          title="Sorteio Realizado!"
+          message={`O ganhador do produto ID ${drawResult.productId} é ${drawResult.winnerName} (ID: ${drawResult.winningUserId}) com o número ${String(drawResult.winningNumber).padStart(2,'0')}. Uma notificação foi enviada.`}
+          onDismiss={() => setDrawResult(null)}
+        />
       )}
-      {error && products.length === 0 && ( 
-         <p className="text-center text-red-500 bg-red-100 p-4 rounded-md">Erro ao carregar produtos: {error}</p>
+      {error && ( 
+         <p className="text-center text-red-500 bg-red-100 p-4 rounded-md mb-4">Erro ao carregar lista de produtos: {error}</p>
       )}
-
 
       {products.length === 0 && !loading && !error ? (
         <p className="text-center text-gray-500 py-8">Nenhum produto cadastrado ainda.</p>

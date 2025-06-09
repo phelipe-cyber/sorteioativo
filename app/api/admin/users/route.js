@@ -57,7 +57,7 @@ export async function GET(request) {
   try {
     const users = await query({
       // Selecionamos os campos relevantes, excluindo password_hash
-      query: "SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC",
+      query: "SELECT id, name, email,phone, role, created_at FROM users ORDER BY created_at DESC",
       values: [],
     });
 

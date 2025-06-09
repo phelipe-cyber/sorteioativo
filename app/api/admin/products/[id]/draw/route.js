@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { dbPool } from '@/app/lib/db'; // Ajuste o caminho se necessário
 import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware'; // Ajuste o caminho se necessário
+import { sendWinnerNotificationEmail } from '@/app/lib/mailer'; // Importar a nova função de e-mail
 
 /**
  * @swagger
@@ -55,14 +56,14 @@ import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware'; // Ajuste o cam
  *         description: Erro interno do servidor.
  */
 
-export async function POST(request, { params }) { // <<< 'params' é desestruturado aqui
+export async function POST(request, { params }) {
   // 1. Verificar se o usuário é um admin
   const authResult = await verifyAdminAuth(request);
   if (!authResult.isAuthenticated) {
     return authResult.error;
   }
 
-  const productId = params.id; // <<< Acessa params.id diretamente
+  const productId = params.id;
   let connection;
 
   console.log(`API Admin Draw: Iniciando sorteio para produto ID: ${productId}`);
@@ -74,97 +75,105 @@ export async function POST(request, { params }) { // <<< 'params' é desestrutur
 
     // 2. Verificar se o produto existe e está 'ativo'
     const [productRows] = await connection.execute(
-      "SELECT status FROM products WHERE id = ? FOR UPDATE", // FOR UPDATE para travar a linha
+      "SELECT status, name, total_numbers FROM products WHERE id = ? FOR UPDATE", // Pega também o nome e o total de números
       [productId]
     );
 
     if (productRows.length === 0) {
       await connection.rollback();
-      console.error(`API Admin Draw: Produto ID ${productId} não encontrado.`);
-      return new NextResponse(JSON.stringify({ message: 'Produto não encontrado' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new NextResponse(JSON.stringify({ message: 'Produto não encontrado' }), 
+        { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const productStatus = productRows[0].status;
-    if (productStatus !== 'active') {
+    const product = productRows[0];
+    if (product.status !== 'active') {
       await connection.rollback();
-      console.warn(`API Admin Draw: Tentativa de sortear produto ID ${productId} com status '${productStatus}'.`);
-      return new NextResponse(JSON.stringify({ message: `O sorteio não pode ser realizado. Status atual do produto: ${productStatus}` }), {
-        status: 409, // Conflict
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new NextResponse(JSON.stringify({ message: `O sorteio não pode ser realizado. Status atual do produto: ${product.status}` }), 
+        { status: 409, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // 3. Verificar se TODOS os números (0-100, total 101) foram vendidos para este produto
+    // 3. Verificar se todos os números foram vendidos
     const [countRows] = await connection.execute(
         "SELECT COUNT(*) as sold_count FROM raffle_numbers WHERE product_id = ? AND status = 'sold'",
         [productId]
     );
+    
+    const totalNumbersExpected = (product.total_numbers || 0) + 1; // +1 porque os números vão de 0 a total_numbers
 
     const soldCount = countRows[0].sold_count;
-    const totalNumbersExpected = 101; // Números de 0 a 100
-
     if (soldCount < totalNumbersExpected) { 
         await connection.rollback();
-        console.warn(`API Admin Draw: Sorteio para produto ID ${productId} não pode ser realizado. Apenas ${soldCount} de ${totalNumbersExpected} números foram vendidos.`);
-        return new NextResponse(JSON.stringify({ message: `O sorteio não pode ser realizado. Apenas ${soldCount} de ${totalNumbersExpected} números foram vendidos.` }), {
-            status: 409, // Conflict
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return new NextResponse(JSON.stringify({ message: `O sorteio não pode ser realizado. Apenas ${soldCount} de ${totalNumbersExpected} números foram vendidos.` }), 
+            { status: 409, headers: { 'Content-Type': 'application/json' } });
     }
-    console.log(`API Admin Draw: Produto ID ${productId} tem ${soldCount} números vendidos. Prosseguindo com o sorteio.`);
-
-    // 4. Se tudo ok, buscar todos os números vendidos para o sorteio
+    
+    // 4. Buscar todos os números vendidos e escolher o vencedor
     const [soldNumbers] = await connection.execute(
       "SELECT number_value, user_id FROM raffle_numbers WHERE product_id = ? AND status = 'sold'",
       [productId]
     );
-
-    if (soldNumbers.length === 0) { // Checagem extra, embora a contagem anterior já devesse cobrir
-        await connection.rollback();
-        console.error(`API Admin Draw: Nenhum número vendido encontrado para produto ID ${productId} apesar da contagem.`);
-        return new NextResponse(JSON.stringify({ message: 'Nenhum número vendido encontrado para realizar o sorteio.' }), {
-            status: 500, headers: { 'Content-Type': 'application/json' },
-        });
-    }
-
-    // 5. Escolher o vencedor aleatoriamente no lado do servidor
     const winner = soldNumbers[Math.floor(Math.random() * soldNumbers.length)];
-    console.log(`API Admin Draw: Número vencedor sorteado para produto ID ${productId}: ${winner.number_value} (Usuário ID: ${winner.user_id})`);
+    console.log(`API Admin Draw: Vencedor sorteado para produto ID ${productId}: Número ${winner.number_value} (Usuário ID: ${winner.user_id})`);
 
-    // 6. Atualizar o produto com o resultado do sorteio e mudar o status para 'drawn'
+    // 5. Buscar os dados do ganhador para a notificação
+    const [winnerDetailsRows] = await connection.execute(
+        "SELECT name, email FROM users WHERE id = ?",
+        [winner.user_id]
+    );
+    if (winnerDetailsRows.length === 0) {
+        await connection.rollback();
+        console.error(`API Admin Draw: Ganhador com ID ${winner.user_id} não foi encontrado.`);
+        return new NextResponse(JSON.stringify({ message: 'Erro: Ganhador não encontrado no sistema.' }), 
+            { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+    const winnerDetails = winnerDetailsRows[0];
+
+    // 6. Atualizar o produto com o resultado
     await connection.execute(
       "UPDATE products SET status = 'drawn', winning_number = ?, winner_user_id = ? WHERE id = ?",
       [winner.number_value, winner.user_id, productId]
     );
-    console.log(`API Admin Draw: Produto ID ${productId} atualizado para 'drawn' com o vencedor.`);
     
-    // 7. Se tudo deu certo, confirmar a transação
+    // 7. Inserir a notificação para o ganhador na tabela 'notifications'
+    const notificationMessage = `Parabéns! Você ganhou o sorteio do produto "${product.name}" com o número ${String(winner.number_value).padStart(2,'0')}.`;
+    await connection.execute(
+        "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)",
+        [winner.user_id, notificationMessage, `/my-numbers`] // Link genérico para "Meus Números"
+    );
+    console.log(`API Admin Draw: Notificação criada no banco para o usuário ID ${winner.user_id}.`);
+
+    
     await connection.commit();
     console.log(`API Admin Draw: Transação commitada para produto ID: ${productId}`);
 
+    // 8. Enviar o e-mail de notificação (após a transação ser confirmada)
+    try {
+        await sendWinnerNotificationEmail({
+            winnerEmail: winnerDetails.email,
+            winnerName: winnerDetails.name,
+            productName: product.name,
+            winningNumber: winner.number_value,
+        });
+    } catch (emailError) {
+        console.error(`API Admin Draw: O sorteio foi um sucesso, mas o envio de e-mail para ${winnerDetails.email} falhou:`, emailError);
+        // Não retorna erro aqui para não falhar a requisição principal do admin
+    }
+
     return NextResponse.json({
-      message: 'Sorteio realizado com sucesso!',
+      message: 'Sorteio realizado! O ganhador foi notificado por e-mail e na plataforma.',
       winningNumber: winner.number_value,
       winningUserId: winner.user_id,
+      winnerName: winnerDetails.name
     }, { status: 200 });
 
   } catch (error) {
-    if (connection) {
-        console.error(`API Admin Draw: Erro na transação para produto ID ${productId}, realizando rollback...`, error);
-        await connection.rollback();
-    }
+    if (connection) await connection.rollback();
     console.error(`API Admin Draw: Erro CRÍTICO ao realizar sorteio para produto ID ${productId}:`, error);
     return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao realizar sorteio' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
     });
   } finally {
-    if (connection) {
-        console.log(`API Admin Draw: Liberando conexão para produto ID: ${productId}`);
-        connection.release();
-    }
+    if (connection) connection.release();
   }
 }

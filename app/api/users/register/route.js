@@ -67,49 +67,49 @@ import bcrypt from 'bcrypt';
 
 export async function POST(request) {
   try {
-    const { name, email, password } = await request.json();
+    // Agora recebemos 'phone' também
+    const { name, email, password, phone } = await request.json();
 
-    if (!name || !email || !password) {
-      return new NextResponse(JSON.stringify({ message: `Nome, email e senha são obrigatórios` }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // Validação dos dados
+    if (!name || !email || !password || !phone) {
+      return new NextResponse(JSON.stringify({ message: 'Todos os campos são obrigatórios.' }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (password.length < 6) {
+      return new NextResponse(JSON.stringify({ message: 'A senha deve ter pelo menos 6 caracteres.' }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const existingUser = await query({
-      query: "SELECT * FROM users WHERE email = ?",
+    // Verificar se o email já existe
+    const [existingUser] = await query({
+      query: "SELECT id FROM users WHERE email = ?",
       values: [email],
     });
 
-    if (existingUser.length > 0) {
-      return new NextResponse(JSON.stringify({ message: `Este email já está em uso` }), {
-        status: 409,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (existingUser) {
+      return new NextResponse(JSON.stringify({ message: 'Este email já está em uso.' }), 
+        { status: 409, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Criptografar a senha
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Inserir o novo usuário no banco de dados, incluindo o telefone
     const result = await query({
-      query: "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-      values: [name, email, passwordHash],
+      query: "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'user')",
+      values: [name, email, phone, passwordHash],
     });
     
     const createdUserId = result.insertId;
-    
-    return new NextResponse(JSON.stringify({
-      message: `Usuário criado com sucesso!`,
+
+    return NextResponse.json({ 
+      message: 'Usuário criado com sucesso!', 
       userId: createdUserId 
-    }),{
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    }, { status: 201 });
 
   } catch (error) {
-    console.error(error);
-    return new NextResponse(JSON.stringify({ message: `Erro interno do servidor` }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error("Erro na API de registro:", error);
+    return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao registrar usuário.' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

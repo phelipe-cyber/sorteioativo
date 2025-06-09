@@ -72,3 +72,11 @@ ADD COLUMN reserved_at TIMESTAMP NULL DEFAULT NULL AFTER order_id;
 ALTER TABLE orders
 ADD COLUMN pending_selected_numbers TEXT NULL DEFAULT NULL AFTER payment_details;
 
+ALTER TABLE users
+ADD COLUMN phone VARCHAR(20) NULL DEFAULT NULL AFTER email;
+
+ALTER TABLE products
+ADD COLUMN prize_type ENUM('product_or_pix', 'product_only') NOT NULL DEFAULT 'product_or_pix' AFTER total_numbers;
+
+ALTER TABLE products
+ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at;
