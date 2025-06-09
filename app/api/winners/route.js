@@ -36,7 +36,7 @@ import { query } from '@/app/lib/db'; // Ajuste o caminho se necessário
  * '500':
  * description: Erro interno do servidor.
  */
-export async function GET(request) {
+export async function GET() {
   console.log("API /api/winners: Buscando lista de ganhadores...");
   try {
     const winners = await query({
