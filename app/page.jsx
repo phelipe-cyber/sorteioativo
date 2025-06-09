@@ -49,7 +49,7 @@ function ProductCard({ product, isLoading, onClick }) {
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
         >
           <div className={`transition-opacity duration-300 ${isLoading ? 'opacity-20' : 'opacity-100'}`}>
-            <div className="flex p-5"> 
+            <div className="flex items-center space-x-5"> 
               <div className="w-1/3 flex-shrink-0 mr-5"> 
                 <img
                   src={product.image_url || `https://placehold.co/200x200/E2E8F0/4A5568?text=Imagem`}
