@@ -85,9 +85,10 @@ export async function POST(request, { params }) {
       productName: order.product_name,
       reservedNumbers: reservedNumbers,
       paymentLink: paymentLink,
+      orderId: orderId,
     });
 
-    return NextResponse.json({ message: 'E-mail de lembrete enviado com sucesso!' });
+    return NextResponse.json({ message: 'E-mail de lembrete enviado com sucesso!'  });
 
   } catch (error) {
     console.error(`Erro ao enviar lembrete para pedido ${orderId}:`, error);

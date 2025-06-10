@@ -109,11 +109,11 @@ export async function POST(request, { params }) {
     
     // 4. Buscar todos os números vendidos e escolher o vencedor
     const [soldNumbers] = await connection.execute(
-      "SELECT number_value, user_id FROM raffle_numbers WHERE product_id = ? AND status = 'sold'",
+      "SELECT number_value, user_id, order_id FROM raffle_numbers WHERE product_id = ? AND status = 'sold'",
       [productId]
     );
     const winner = soldNumbers[Math.floor(Math.random() * soldNumbers.length)];
-    console.log(`API Admin Draw: Vencedor sorteado para produto ID ${productId}: Número ${winner.number_value} (Usuário ID: ${winner.user_id})`);
+    console.log(`API Admin Draw: Vencedor sorteado para produto ID ${productId}: Número ${winner.number_value} (Utilizador ID: ${winner.user_id}, Pedido ID: ${winner.order_id})`);
 
     // 5. Buscar os dados do ganhador para a notificação
     const [winnerDetailsRows] = await connection.execute(
@@ -138,42 +138,43 @@ export async function POST(request, { params }) {
     const notificationMessage = `Parabéns! Você ganhou o sorteio do produto "${product.name}" com o número ${String(winner.number_value).padStart(2,'0')}.`;
     await connection.execute(
         "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)",
-        [winner.user_id, notificationMessage, `/my-numbers`] // Link genérico para "Meus Números"
+        [winner.user_id, notificationMessage, `/my-numbers`] 
     );
-    console.log(`API Admin Draw: Notificação criada no banco para o usuário ID ${winner.user_id}.`);
-
+    console.log(`API Admin Draw: Notificação criada no banco para o utilizador ID ${winner.user_id}.`);
     
     await connection.commit();
     console.log(`API Admin Draw: Transação commitada para produto ID: ${productId}`);
 
+     // --- ALTERAÇÃO AQUI: Passar o order_id para a função de e-mail ---
     // 8. Enviar o e-mail de notificação (após a transação ser confirmada)
     try {
-        await sendWinnerNotificationEmail({
-            winnerEmail: winnerDetails.email,
-            winnerName: winnerDetails.name,
-            productName: product.name,
-            winningNumber: winner.number_value,
-        });
-    } catch (emailError) {
-        console.error(`API Admin Draw: O sorteio foi um sucesso, mas o envio de e-mail para ${winnerDetails.email} falhou:`, emailError);
-        // Não retorna erro aqui para não falhar a requisição principal do admin
-    }
-
-    return NextResponse.json({
-      message: 'Sorteio realizado! O ganhador foi notificado por e-mail e na plataforma.',
-      winningNumber: winner.number_value,
-      winningUserId: winner.user_id,
-      winnerName: winnerDetails.name
-    }, { status: 200 });
-
-  } catch (error) {
-    if (connection) await connection.rollback();
-    console.error(`API Admin Draw: Erro CRÍTICO ao realizar sorteio para produto ID ${productId}:`, error);
-    return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao realizar sorteio' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-    });
-  } finally {
-    if (connection) connection.release();
+      await sendWinnerNotificationEmail({
+          winnerEmail: winnerDetails.email,
+          winnerName: winnerDetails.name,
+          productName: product.name,
+          winningNumber: winner.number_value,
+          orderId: winner.order_id // Passando o ID do pedido
+      });
+  } catch (emailError) {
+      console.error(`API Admin Draw: O sorteio foi um sucesso, mas o envio de e-mail para ${winnerDetails.email} falhou:`, emailError);
   }
+
+  return NextResponse.json({
+    message: 'Sorteio realizado! O ganhador foi notificado por e-mail e na plataforma.',
+    winningNumber: winner.number_value,
+    winningUserId: winner.user_id,
+    winnerName: winnerDetails.name,
+    orderId: winner.order_id
+  }, { status: 200 });
+
+} catch (error) {
+  if (connection) await connection.rollback();
+  console.error(`API Admin Draw: Erro CRÍTICO ao realizar sorteio para produto ID ${productId}:`, error);
+  return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao realizar sorteio' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+  });
+} finally {
+  if (connection) connection.release();
+}
 }
