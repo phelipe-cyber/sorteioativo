@@ -261,9 +261,9 @@ export default function ProductDetailPage() {
             <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl shadow-xl overflow-hidden sticky top-24"> {/* Sticky para imagem */}
                     <img 
-                        src={product.image_url || `https://placehold.co/800x600/E2E8F0/4A5568?text=${encodeURIComponent(product.name)}`} 
+                        src= {product.image_url || `https://placehold.co/800x600/E2E8F0/4A5568?text=${encodeURIComponent(product.name)}`} 
                         alt={product.name}
-                        className="w-full h-auto object-cover aspect-[4/3]"
+                        className="w-full h-auto"
                     />
                     <div className="p-6">
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>

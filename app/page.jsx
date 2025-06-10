@@ -25,8 +25,8 @@ function ProductCard({ product, isLoading, onClick }) {
     >
       <div className={`transition-opacity duration-300 flex-grow ${isLoading ? 'opacity-20' : ''}`}>
         {/* --- CONTAINER DA IMAGEM --- */}
-        <div className="w-full h-27 bg-gray-190"> 
-          <img
+        <div className="w-full h-auto">
+          <img 
             src={product.image_url || `https://placehold.co/400x300/E2E8F0/4A5568?text=Imagem`}
             alt={product.name}
             className="w-full h-full object-cover" // object-cover garante que a imagem preencha o container, cortando o excesso
