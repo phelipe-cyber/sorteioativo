@@ -22,14 +22,13 @@ export async function verifyAuth(request) {
 
   try {
     const verified = await jwtVerify(token, getJwtSecretKey());
-    
-    // console.log('MIDDLEWARE verifyAuth: Token verificado COM SUCESSO. Payload:', verified.payload); // <-- ADICIONE ESTE LOG
+    console.log('MIDDLEWARE verifyAuth: Token verificado COM SUCESSO. Payload:', verified.payload); // <-- ADICIONE ESTE LOG
     return {
       isAuthenticated: true,
       payload: verified.payload,
     };
   } catch (err) {
-    // console.error('MIDDLEWARE verifyAuth: FALHA na verificação do token.', err.code, err.message); // <-- ADICIONE ESTE LOG
+    console.error('MIDDLEWARE verifyAuth: FALHA na verificação do token.', err.code, err.message); // <-- ADICIONE ESTE LOG
     return {
       isAuthenticated: false,
       error: new NextResponse('Token inválido ou expirado', { status: 401 }),
