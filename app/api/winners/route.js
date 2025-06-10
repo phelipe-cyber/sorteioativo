@@ -36,11 +36,12 @@ import { query } from '@/app/lib/db'; // Ajuste o caminho se necessário
  * '500':
  * description: Erro interno do servidor.
  */
-export async function GET() {
+export async function GET() { // Removido 'request' que não era usado
   console.log("API /api/winners: Buscando lista de ganhadores...");
   try {
     const winners = await query({
       // Usamos um JOIN para pegar o nome do ganhador da tabela 'users'
+      // A query ordena por p.updated_at, que precisa existir na tabela products
       query: `
         SELECT 
           p.id as product_id,
@@ -62,8 +63,9 @@ export async function GET() {
 
   } catch (error) {
     console.error("Erro ao listar ganhadores:", error);
+    // Retorna uma resposta de erro em JSON para que o frontend possa ler a mensagem
     return new NextResponse(
-        JSON.stringify({ message: 'Erro interno do servidor ao listar ganhadores.' }),
+        JSON.stringify({ message: 'Erro interno do servidor ao listar ganhadores.', details: error.message }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

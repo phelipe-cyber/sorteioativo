@@ -8,7 +8,8 @@ const menuItems = [
   { href: '/admin/dashboard', label: 'Dashboard' },
   { href: '/admin/products/new', label: 'Cadastrar Produto' },
   { href: '/admin/products', label: 'Listar Produtos' }, // Página que criaremos no futuro
-  { href: '/admin/users', label: 'Gerenciar Usuários' }
+  { href: '/admin/users', label: 'Gerenciar Usuários' },
+  { href: '/admin/orders', label: 'Gerenciar Pedidos' },
 
   // Adicione mais links aqui conforme necessário
   // { href: '/admin/users', label: 'Gerenciar Usuários' },
