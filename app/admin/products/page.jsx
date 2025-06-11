@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext'; // Ajuste o caminho
 import Link from 'next/link';
 import Spinner from '@/components/Spinner'; // Ajuste o caminho
-
+import { useRouter } from 'next/navigation';
 // Ícone SVG para Editar (reutilizado da página de usuários)
 const IconEdit = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -56,13 +56,22 @@ const Notification = ({ title, message, type, onDismiss }) => {
 };
 
 export default function AdminProductsListPage() {
-  const { token } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [drawingProductId, setDrawingProductId] = useState(null); 
   const [drawResult, setDrawResult] = useState(null); 
   const [drawError, setDrawError] = useState(null);   
+
+  const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
+  const router = useRouter();
+  useEffect(() => {
+    if (!authLoading) {
+      if (!isAuthenticated || user?.role !== 'admin') {
+        router.push('/login');
+      }
+    }
+  }, [user, authLoading, isAuthenticated, router]);
 
   const fetchProducts = useCallback(async () => {
     if (!token) return; 

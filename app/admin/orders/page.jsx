@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import Spinner from '@/components/Spinner';
+import { useRouter } from 'next/navigation';
 
 const IconEdit = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -31,13 +32,22 @@ const IconTrophy = () => (
 
 
 export default function AdminOrdersPage() {
-  const { token } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
   const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
+  const router = useRouter();
+  useEffect(() => {
+    if (!authLoading) { 
+      if (!isAuthenticated || user?.role !== 'admin') {
+        router.push('/login');
+      }
+    }
+  }, [user, authLoading, isAuthenticated, router]);
 
   const fetchOrders = useCallback(async () => {
     if (!token) return;

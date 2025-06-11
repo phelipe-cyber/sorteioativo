@@ -1,8 +1,12 @@
 // app/admin/dashboard/page.jsx
 'use client';
-
 import Link from 'next/link';
 import { FilePlus, ListChecks, Users, ShoppingBag, BarChart3 } from 'lucide-react'; // Ícones para visual
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext'; 
+
 
 // Ícones simples como componentes SVG se lucide-react não estiver disponível ou preferir
 const IconFilePlus = () => (
@@ -42,7 +46,19 @@ const IconShoppingBag = () => (
   </svg>
 );
 
+
 export default function AdminDashboardPage() {
+
+  const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
+  const router = useRouter();
+  useEffect(() => {
+    if (!authLoading) { 
+      if (!isAuthenticated || user?.role !== 'admin') {
+        router.push('/login');
+      }
+    }
+  }, [user, authLoading, isAuthenticated, router]);
+
   const cardClasses = "bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out flex flex-col items-center text-center";
   const iconWrapperClasses = "mb-4 p-3 bg-indigo-100 rounded-full text-indigo-600";
   const titleClasses = "text-lg font-semibold text-gray-800 mb-1";

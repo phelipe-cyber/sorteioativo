@@ -1,11 +1,11 @@
 // app/admin/users/new/page.jsx
 'use client';
 
-import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext'; // Ajuste o caminho
 import { useRouter } from 'next/navigation';
 import Spinner from '@/components/Spinner'; // Ajuste o caminho
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 const IconArrowLeft = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -33,9 +33,7 @@ const IconEyeOff = () => (
 
 
 export default function AdminCreateUserPage() {
-  const { token } = useAuth(); 
-  const router = useRouter();
-
+ 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +43,16 @@ export default function AdminCreateUserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
+  const router = useRouter();
+  useEffect(() => {
+    if (!authLoading) { 
+      if (!isAuthenticated || user?.role !== 'admin') {
+        router.push('/login');
+      }
+    }
+  }, [user, authLoading, isAuthenticated, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

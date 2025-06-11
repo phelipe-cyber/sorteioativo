@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext'; 
 import Link from 'next/link'; // Importar Link
 import Spinner from '@/components/Spinner'; 
+import { useRouter } from 'next/navigation';
 
 // Ícones SVG
 const IconUserPlus = () => (
@@ -32,10 +33,19 @@ const IconTrash = () => (
 
 
 export default function AdminUsersPage() {
-  const { token } = useAuth(); 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
+  const router = useRouter();
+  useEffect(() => {
+    if (!authLoading) { 
+      if (!isAuthenticated || user?.role !== 'admin') {
+        router.push('/login');
+      }
+    }
+  }, [user, authLoading, isAuthenticated, router]);
 
   useEffect(() => {
     if (token) {
