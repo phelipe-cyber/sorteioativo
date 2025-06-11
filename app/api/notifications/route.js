@@ -6,72 +6,73 @@ import { verifyAuth } from '@/app/lib/authMiddleware'; // Ajuste o caminho se ne
 /**
  * @swagger
  * /api/notifications:
- * get:
- * summary: Busca as notificações do usuário logado
- * description: Retorna uma lista de todas as notificações para o usuário autenticado, ordenadas das mais recentes para as mais antigas.
- * tags:
- * - Notifications
- * security:
- * - bearerAuth: []
- * responses:
- * '200':
- * description: Sucesso. Retorna as notificações.
- * content:
- * application/json:
- * schema:
- * type: object
- * properties:
- * notifications:
- * type: array
- * items:
- * type: object
- * properties:
- * id:
- * type: integer
- * message:
- * type: string
- * is_read:
- * type: boolean
- * link:
- * type: string
- * created_at:
- * type: string
- * format: date-time
- * '401':
- * description: Não autenticado.
- * '500':
- * description: Erro interno do servidor.
- * put:
- * summary: Marca notificações como lidas
- * description: Permite marcar uma ou todas as notificações do usuário como lidas.
- * tags:
- * - Notifications
- * security:
- * - bearerAuth: []
- * requestBody:
- * required: true
- * content:
- * application/json:
- * schema:
- * type: object
- * properties:
- * notificationIds:
- * type: array
- * items:
- * type: integer
- * description: Um array de IDs de notificações para marcar como lidas.
- * mark_all_as_read:
- * type: boolean
- * description: Se verdadeiro, marca todas as notificações não lidas como lidas.
- * example:
- * notificationIds: [1, 2, 3]
- * responses:
- * '200':
- * description: Notificações atualizadas com sucesso.
- * '400':
- * description: Requisição inválida.
- * '401':
- * description: Não autenticado.
+ *   get:
+ *     summary: Busca as notificações do usuário logado
+ *     description: Retorna uma lista de todas as notificações para o usuário autenticado, ordenadas das mais recentes para as mais antigas.
+ *     tags:
+ *       - Notifications
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       '200':
+ *         description: Sucesso. Retorna as notificações.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 notifications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       message:
+ *                         type: string
+ *                       is_read:
+ *                         type: boolean
+ *                       link:
+ *                         type: string
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *       '401':
+ *         description: Não autenticado.
+ *       '500':
+ *         description: Erro interno do servidor.
+ *   put:
+ *     summary: Marca notificações como lidas
+ *     description: Permite marcar uma ou todas as notificações do usuário como lidas.
+ *     tags:
+ *       - Notifications
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notificationIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Um array de IDs de notificações para marcar como lidas.
+ *               mark_all_as_read:
+ *                 type: boolean
+ *                 description: Se verdadeiro, marca todas as notificações não lidas como lidas.
+ *             example:
+ *               notificationIds: [1, 2, 3]
+ *               mark_all_as_read: false
+ *     responses:
+ *       '200':
+ *         description: Notificações atualizadas com sucesso.
+ *       '400':
+ *         description: Requisição inválida.
+ *       '401':
+ *         description: Não autenticado.
  */
 
 

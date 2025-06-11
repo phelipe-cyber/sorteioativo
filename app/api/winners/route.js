@@ -5,37 +5,51 @@ import { query } from '@/app/lib/db'; // Ajuste o caminho se necessário
 /**
  * @swagger
  * /api/winners:
- * get:
- * summary: Lista os ganhadores dos sorteios finalizados
- * description: Retorna uma lista de produtos com status 'drawn', incluindo o nome do produto, o número vencedor e o nome do ganhador.
- * tags:
- * - Public
- * responses:
- * '200':
- * description: Uma lista de sorteios finalizados e seus ganhadores.
- * content:
- * application/json:
- * schema:
- * type: object
- * properties:
- * winners:
- * type: array
- * items:
- * type: object
- * properties:
- * product_id:
- * type: integer
- * product_name:
- * type: string
- * product_image_url:
- * type: string
- * winning_number:
- * type: integer
- * winner_name:
- * type: string
- * '500':
- * description: Erro interno do servidor.
+ *   get:
+ *     summary: Lista os ganhadores dos sorteios finalizados
+ *     description: Retorna uma lista de produtos com status 'drawn', incluindo o nome do produto, o número vencedor e o nome do ganhador.
+ *     tags:
+ *       - Public
+ *     responses:
+ *       '200':
+ *         description: Uma lista de sorteios finalizados e seus ganhadores.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 winners:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       product_id:
+ *                         type: integer
+ *                       product_name:
+ *                         type: string
+ *                       product_image_url:
+ *                         type: string
+ *                       winning_number:
+ *                         type: integer
+ *                       winner_name:
+ *                         type: string
+ *             example:
+ *               winners:
+ *                 - product_id: 101
+ *                   product_name: "iPhone 14 Pro Max"
+ *                   product_image_url: "https://example.com/images/iphone14.jpg"
+ *                   winning_number: 42
+ *                   winner_name: "João Silva"
+ *                 - product_id: 102
+ *                   product_name: "PlayStation 5"
+ *                   product_image_url: "https://example.com/images/ps5.jpg"
+ *                   winning_number: 7
+ *                   winner_name: "Maria Oliveira"
+ *       '500':
+ *         description: Erro interno do servidor.
  */
+
+
 export async function GET() { // Removido 'request' que não era usado
   console.log("API /api/winners: Buscando lista de ganhadores...");
   try {

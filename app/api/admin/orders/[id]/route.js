@@ -6,52 +6,51 @@ import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware';
 /**
  * @swagger
  * /api/admin/orders/{id}:
- * get:
- * summary: Obtém os detalhes de um pedido específico (Admin)
- * description: (Admin) Retorna os detalhes completos de um pedido, incluindo números associados.
- * tags:
- * - Admin - Orders
- * parameters:
- * - in: path
- * name: id
- * required: true
- * schema:
- * type: integer
- * responses:
- * '200':
- * description: Detalhes do pedido.
- * '404':
- * description: Pedido não encontrado.
- * put:
- * summary: Atualiza o status de um pedido (Admin)
- * description: (Admin) Permite alterar o status de um pedido. Se um pedido pendente for alterado para 'completed', os números reservados serão marcados como 'sold'. Se alterado para 'failed' ou 'cancelled', serão libertados.
- * tags:
- * - Admin - Orders
- * parameters:
- * - in: path
- * name: id
- * required: true
- * schema:
- * type: integer
- * requestBody:
- * required: true
- * content:
- * application/json:
- * schema:
- * type: object
- * properties:
- * status:
- * type: string
- * enum: [pending, completed, failed, cancelled]
- * responses:
- * '200':
- * description: Pedido atualizado com sucesso.
- * '400':
- * description: Status inválido.
- * '409':
- * description: Conflito, o pedido já foi processado ou está num estado que não permite alteração.
+ *   get:
+ *     summary: Obtém os detalhes de um pedido específico (Admin)
+ *     description: (Admin) Retorna os detalhes completos de um pedido, incluindo números associados.
+ *     tags:
+ *       - Admin - Orders
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       '200':
+ *         description: Detalhes do pedido.
+ *       '404':
+ *         description: Pedido não encontrado.
+ *   put:
+ *     summary: Atualiza o status de um pedido (Admin)
+ *     description: (Admin) Permite alterar o status de um pedido. Se um pedido pendente for alterado para 'completed', os números reservados serão marcados como 'sold'. Se alterado para 'failed' ou 'cancelled', serão libertados.
+ *     tags:
+ *       - Admin - Orders
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, completed, failed, cancelled]
+ *     responses:
+ *       '200':
+ *         description: Pedido atualizado com sucesso.
+ *       '400':
+ *         description: Status inválido.
+ *       '409':
+ *         description: Conflito, o pedido já foi processado ou está num estado que não permite alteração.
  */
-
 export async function GET(request, { params }) {
     const authResult = await verifyAdminAuth(request);
     if (!authResult.isAuthenticated) {

@@ -53,7 +53,6 @@ export const sendWinnerNotificationEmail = async ({ winnerEmail, winnerName, pro
   }
 };
 
-
 /**
  * --- FUNÇÃO ATUALIZADA ---
  * Envia um e-mail de lembrete para um pedido pendente.
@@ -97,5 +96,46 @@ export const sendPaymentReminderEmail = async ({ userEmail, userName, productNam
   } catch (error) {
     console.error(`Erro ao enviar e-mail de lembrete para ${userEmail}:`, error);
     throw new Error('Falha ao enviar o e-mail de lembrete.');
+  }
+};
+
+
+/**
+ * --- NOVA FUNÇÃO ADICIONADA ---
+ * Envia um e-mail com o link para redefinição de senha.
+ * @param {object} options - As opções do e-mail.
+ * @param {string} options.userEmail - O e-mail do utilizador.
+ * @param {string} options.userName - O nome do utilizador.
+ * @param {string} options.resetUrl - O URL para a página de redefinição de senha.
+ */
+export const sendPasswordResetEmail = async ({ userEmail, userName, resetUrl }) => {
+  const mailOptions = {
+    from: `"Site de Sorteios" <${process.env.SMTP_USER}>`,
+    to: userEmail,
+    subject: `Redefinição de Senha para sua Conta`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h1 style="color: #4F46E5;">Olá, ${userName}!</h1>
+        <p>Recebemos um pedido para redefinir a senha da sua conta.</p>
+        <p>Clique no botão abaixo para criar uma nova senha. Este link é válido por 1 hora.</p>
+        <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #fff; background-color: #4F46E5; text-decoration: none; border-radius: 5px; margin-top: 10px;">
+          Redefinir Senha
+        </a>
+        <br>
+        <p style="font-size: 0.9em; color: #666;">Se você não solicitou uma redefinição de senha, pode ignorar este e-mail com segurança.</p>
+        <br>
+        <p>Obrigado,</p>
+        <p><strong>Equipe do Site de Sorteios</strong></p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`E-mail de redefinição de senha enviado para ${userEmail}: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`Erro ao enviar e-mail de redefinição de senha para ${userEmail}:`, error);
+    throw new Error('Falha ao enviar o e-mail de redefinição.');
   }
 };

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext'; // Usando alias do seu projeto
+import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 
 // --- ÍCONES ---
@@ -38,6 +38,19 @@ const SettingsIcon = ({ className = "w-5 h-5" }) => (
     <path d="M21 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M21 18H3"/>
   </svg>
 );
+const KeyIcon = ({ className = "w-5 h-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m21 2-2 2-2.5 2.5-2.5 2.5-1.5 1.5L8 16l-2.5 2.5L2 22l5.5-1.5L10 18l1.5-1.5L14 14l2.5-2.5L19 9l2-2z"></path>
+    </svg>
+);
+const LogOutIcon = ({ className = "w-5 h-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+    </svg>
+);
+
 
 // --- HOOK CUSTOMIZADO PARA LIDAR COM CLIQUE FORA ---
 const useClickOutside = (ref, handler) => {
@@ -66,7 +79,11 @@ export default function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationsRef = useRef(null);
 
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+
   useClickOutside(notificationsRef, () => setIsNotificationsOpen(false));
+  useClickOutside(profileMenuRef, () => setIsProfileMenuOpen(false));
 
   const fetchNotifications = useCallback(async () => {
     if (!token) return;
@@ -92,15 +109,25 @@ export default function Header() {
   const handleMarkAsRead = async (notificationId = null) => {
     const idsToMark = notificationId ? [notificationId] : notifications.filter(n => !n.is_read).map(n => n.id);
     if (idsToMark.length === 0) return;
+    const previousNotifications = [...notifications];
+    const previousUnreadCount = unreadCount;
+    setNotifications(prev => 
+      prev.map(n => idsToMark.includes(n.id) ? { ...n, is_read: true } : n)
+    );
+    setUnreadCount(prev => prev - idsToMark.length);
     try {
-      await fetch('/api/notifications', {
+      const response = await fetch('/api/notifications', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ notificationIds: idsToMark }),
+        body: JSON.stringify(notificationId ? { notificationIds: idsToMark } : { mark_all_as_read: true }),
       });
-      fetchNotifications();
+      if (!response.ok) {
+        throw new Error('Falha ao comunicar com o servidor.');
+      }
     } catch (error) {
-      console.error("Erro ao marcar notificação como lida:", error);
+      console.error("Erro ao marcar notificação como lida, revertendo:", error);
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
     }
   };
   
@@ -113,6 +140,7 @@ export default function Header() {
   const handleLogout = async () => {
     await logout(); 
     setMobileMenuOpen(false); 
+    setIsProfileMenuOpen(false);
   };
 
   useEffect(() => {
@@ -147,7 +175,7 @@ export default function Header() {
         className="p-2 rounded-full text-indigo-200 hover:text-white hover:bg-indigo-500/75 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-indigo-600 focus:ring-white"
       >
         <span className="sr-only">Ver notificações</span>
-        <BellIcon />
+        <BellIcon className="h-6 w-6" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
             {unreadCount}
@@ -212,24 +240,56 @@ export default function Header() {
             <nav className="hidden md:flex items-center space-x-4">
               {isAuthenticated && user ? (
                 <>
-                  <Link href="/my-numbers" className={`${navLinkBaseClasses} ${isActive('/my-numbers') ? navLinkDesktopActiveClasses : navLinkDesktopIdleClasses}`}>
+                  <Link href="/my-numbers" className={`${navLinkBaseClasses} ${isActive('/my-numbers') ? navLinkDesktopActiveClasses : navLinkDesktopIdleClasses}`} >
                     <TicketIcon className="w-4 h-4 mr-1.5" /> Meus Números
                   </Link>
                   {user.role === 'admin' && (
-                    <Link href="/admin/dashboard" className={`${adminLinkBaseClasses} ${isActive('/admin/dashboard') || pathname.startsWith('/admin/') ? adminLinkDesktopActiveClasses : adminLinkDesktopIdleClasses}`}>
+                    <Link href="/admin/dashboard" className={`${adminLinkBaseClasses} ${isActive('/admin/dashboard') || pathname.startsWith('/admin/') ? adminLinkDesktopActiveClasses : adminLinkDesktopIdleClasses}`} >
                       <SettingsIcon className="w-4 h-4 mr-1.5" /> Painel Admin
                     </Link>
                   )}
                   <NotificationButton />
-                  {/* --- BLOCO DE INFORMAÇÕES DO UTILIZADOR ATUALIZADO --- */}
-                  <div className="flex items-center space-x-3 pl-2 pr-4 py-1.5 bg-indigo-500 hover:bg-indigo-700 transition-colors rounded-full text-indigo-100 text-sm cursor-pointer">
-                    <UserCircleIcon className="w-7 h-7 text-white flex-shrink-0" />
-                    <div className="flex flex-col items-start -space-y-1">
-                      <span className="font-semibold text-white leading-tight">{user.name}</span>
-                      <span className="text-xs text-indigo-300 leading-tight truncate max-w-[150px] lg:max-w-[200px]">{user.email}</span>
-                    </div>
+                  
+                  <div className="relative" ref={profileMenuRef}>
+                    <button
+                      onClick={() => setIsProfileMenuOpen(prev => !prev)}
+                      className="flex items-center space-x-3 pl-2 pr-4 py-1.5 bg-indigo-500 hover:bg-indigo-700 transition-colors rounded-full text-indigo-100 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-indigo-600 focus:ring-white"
+                    >
+                      <UserCircleIcon className="w-7 h-7 text-white flex-shrink-0" />
+                      <div className="flex flex-col items-start -space-y-1">
+                        <span className="font-semibold text-white leading-tight">{user.name}</span>
+                        <span className="text-xs text-indigo-300 leading-tight truncate max-w-[150px] lg:max-w-[200px]">{user.email}</span>
+                      </div>
+                    </button>
+
+                    {isProfileMenuOpen && (
+                      <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
+                        <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
+                          <div className="px-4 py-3 border-b">
+                            <p className="text-sm font-medium text-gray-900 truncate" role="none">Logado como</p>
+                            <p className="text-sm text-gray-700 font-semibold truncate" role="none">{user.name}</p>
+                          </div>
+                          <Link
+                            href="/profile/change-password"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                            role="menuitem"
+                          >
+                            <KeyIcon className="w-4 h-4 mr-3 text-gray-500"/>
+                            Alterar Senha
+                          </Link>
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                            role="menuitem"
+                          >
+                            <LogOutIcon className="w-4 h-4 mr-3"/>
+                            Sair
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-md text-sm shadow-sm">Sair</button>
                 </>
               ) : (
                 <Link href="/login" className={`${navLinkBaseClasses} ${isActive('/login') ? navLinkDesktopActiveClasses : navLinkDesktopIdleClasses} bg-green-500 hover:bg-green-600`}>Login / Registrar</Link>
@@ -239,11 +299,7 @@ export default function Header() {
             {/* Container para botões do Mobile */}
             <div className="md:hidden flex items-center">
               {isAuthenticated && <NotificationButton />}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                type="button"
-                className="ml-2 inline-flex items-center justify-center p-2 rounded-md text-indigo-200 hover:text-white hover:bg-indigo-700"
-              >
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} type="button" className="ml-2 inline-flex items-center justify-center p-2 rounded-md text-indigo-200 hover:text-white hover:bg-indigo-700">
                 <span className="sr-only">Abrir menu</span>
                 {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
               </button>
@@ -252,7 +308,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Menu Mobile (dropdown) */}
+      {/* --- CÓDIGO DO MENU MOBILE RESTAURADO --- */}
       {mobileMenuOpen && (
         <div className="md:hidden absolute w-full bg-indigo-600 shadow-lg z-40 border-t border-indigo-500" id="mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
@@ -274,11 +330,18 @@ export default function Header() {
                             <p className="text-sm font-medium text-indigo-300">{user.email}</p>
                         </div>
                     </div>
+                    <Link
+                      href="/profile/change-password"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`${navLinkMobileBaseClasses} ${navLinkMobileIdleClasses}`}
+                    >
+                      <KeyIcon className="w-5 h-5 mr-3"/> Alterar Senha
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className={`w-full text-left ${navLinkMobileBaseClasses} bg-red-500 hover:bg-red-600 text-white mt-1`}
                     >
-                      Sair
+                      <LogOutIcon className="w-5 h-5 mr-3"/> Sair
                     </button>
                  </div>
               </>

@@ -1,11 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import 'swagger-ui-react/swagger-ui.css';
-import SwaggerUI from 'swagger-ui-react';
-import spec from '../../public/swagger.json'; 
 
-function ApiDocPage() {
-  return <SwaggerUI spec={spec} />;
+const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
+
+export default function ApiDocPage() {
+  return <SwaggerUI url="/swagger.json" />;
 }
-
-export default ApiDocPage;

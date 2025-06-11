@@ -8,27 +8,41 @@ import { sendPaymentReminderEmail } from '@/app/lib/mailer'; // Ajuste o caminho
 /**
  * @swagger
  * /api/admin/orders/{id}/remind:
- * post:
- * summary: Envia um e-mail de lembrete para um pedido pendente (Admin)
- * description: (Admin) Busca os detalhes de um pedido pendente e envia um e-mail de lembrete para o cliente.
- * tags:
- * - Admin - Orders
- * security:
- * - bearerAuth: []
- * parameters:
- * - in: path
- * name: id
- * required: true
- * schema:
- * type: integer
- * responses:
- * '200':
- * description: E-mail de lembrete enviado com sucesso.
- * '404':
- * description: Pedido não encontrado.
- * '409':
- * description: Conflito (ex: o pedido não está pendente).
+ *   post:
+ *     summary: Envia um e-mail de lembrete para um pedido pendente (Admin)
+ *     description: "(Admin) Busca os detalhes de um pedido pendente e envia um e-mail de lembrete para o cliente."
+ *     tags:
+ *       - Admin - Orders
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       '200':
+ *         description: "E-mail de lembrete enviado com sucesso."
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "E-mail de lembrete enviado para o cliente com sucesso."
+ *       '404':
+ *         description: "Pedido não encontrado."
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "Pedido com ID 123 não encontrado."
+ *       '409':
+ *         description: "Conflito (ex: o pedido não está pendente)."
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "O pedido já foi concluído e não pode receber lembrete."
  */
+
+
 export async function POST(request, { params }) {
   const authResult = await verifyAdminAuth(request);
   if (!authResult.isAuthenticated) {

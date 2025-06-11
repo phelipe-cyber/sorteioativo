@@ -6,49 +6,50 @@ import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware';
 /**
  * @swagger
  * /api/admin/orders:
- * get:
- * summary: Lista todos os pedidos do sistema (Admin)
- * description: (Admin) Retorna uma lista de todos os pedidos, juntando informações do utilizador e do produto.
- * tags:
- * - Admin - Orders
- * security:
- * - bearerAuth: []
- * responses:
- * '200':
- * description: Uma lista de todos os pedidos.
- * '401':
- * description: Não autenticado.
- * '403':
- * description: Acesso negado.
- * post:
- * summary: Marca uma ordem como completa (Admin)
- * description: (Admin) Altera o status de uma ordem para 'completed' e o status dos seus números de 'reserved' para 'sold'. Útil para confirmar pagamentos manuais.
- * tags:
- * - Admin - Orders
- * security:
- * - bearerAuth: []
- * requestBody:
- * required: true
- * content:
- * application/json:
- * schema:
- * type: object
- * required:
- * - orderId
- * properties:
- * orderId:
- * type: integer
- * description: O ID da ordem a ser marcada como completa.
- * responses:
- * '200':
- * description: Ordem atualizada com sucesso.
- * '400':
- * description: ID da ordem não fornecido.
- * '404':
- * description: Ordem não encontrada.
- * '409':
- * description: Conflito, a ordem não pode ser marcada como completa (ex: não está pendente).
+ *   get:
+ *     summary: Lista todos os pedidos do sistema (Admin)
+ *     description: "(Admin) Retorna uma lista de todos os pedidos, juntando informações do utilizador e do produto."
+ *     tags:
+ *       - Admin - Orders
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       '200':
+ *         description: "Uma lista de todos os pedidos."
+ *       '401':
+ *         description: "Não autenticado."
+ *       '403':
+ *         description: "Acesso negado."
+ *   post:
+ *     summary: Marca uma ordem como completa (Admin)
+ *     description: "(Admin) Altera o status de uma ordem para 'completed' e o status dos seus números de 'reserved' para 'sold'. Útil para confirmar pagamentos manuais."
+ *     tags:
+ *       - Admin - Orders
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderId
+ *             properties:
+ *               orderId:
+ *                 type: integer
+ *                 description: "O ID da ordem a ser marcada como completa."
+ *     responses:
+ *       '200':
+ *         description: "Ordem atualizada com sucesso."
+ *       '400':
+ *         description: "ID da ordem não fornecido."
+ *       '404':
+ *         description: "Ordem não encontrada."
+ *       '409':
+ *         description: "Conflito, a ordem não pode ser marcada como completa (ex: não está pendente)."
  */
+
 export async function GET(request) {
   const authResult = await verifyAdminAuth(request);
   if (!authResult.isAuthenticated) {
@@ -59,9 +60,10 @@ export async function GET(request) {
     const orders = await query({
       query: `
         SELECT 
-            o.id, o.total_amount, o.status, o.prize_choice, o.created_at,
+            o.id, o.user_id, o.total_amount, o.status, o.prize_choice, o.created_at,
             u.name as user_name, u.email as user_email,
-            p.id as product_id, p.name as product_name
+            p.id as product_id, p.name as product_name,
+            p.status as product_status, p.winning_number, p.winner_user_id
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.id
         LEFT JOIN products p ON o.product_id = p.id
@@ -70,7 +72,34 @@ export async function GET(request) {
       `,
       values: [],
     });
-    return NextResponse.json({ orders });
+
+    if (orders.length === 0) {
+      return NextResponse.json({ orders: [] });
+    }
+
+    const orderIds = orders.map(o => o.id);
+    const placeholders = orderIds.map(() => '?').join(',');
+
+    const numbers = await query({
+        query: `SELECT order_id, number_value FROM raffle_numbers WHERE order_id IN (${placeholders}) ORDER BY number_value ASC`,
+        values: orderIds,
+    });
+
+    const numbersByOrderId = numbers.reduce((acc, num) => {
+        if (!acc[num.order_id]) {
+            acc[num.order_id] = [];
+        }
+        acc[num.order_id].push(num.number_value);
+        return acc;
+    }, {});
+    
+    const ordersWithNumbers = orders.map(order => ({
+        ...order,
+        associatedNumbers: numbersByOrderId[order.id] || [],
+    }));
+
+    return NextResponse.json({ orders: ordersWithNumbers });
+
   } catch (error) {
     console.error("Erro ao listar pedidos (Admin GET):", error);
     return new NextResponse(
@@ -79,6 +108,7 @@ export async function GET(request) {
     );
   }
 }
+
 
 // --- NOVO MÉTODO POST PARA COMPLETAR UMA ORDEM ---
 export async function POST(request) {

@@ -1,11 +1,227 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "API Site de Sorteio",
-    "description": "Documentação completa da API para o site de sorteios.",
-    "version": "1.0.0"
+    "title": "API Sorteio Ativo",
+    "version": "1.0.0",
+    "description": "Documentação da API do Sorteio Ativo"
   },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "paths": {
+    "/api/admin/orders/{id}/remind": {
+      "post": {
+        "summary": "Envia um e-mail de lembrete para um pedido pendente (Admin)",
+        "description": "(Admin) Busca os detalhes de um pedido pendente e envia um e-mail de lembrete para o cliente.",
+        "tags": [
+          "Admin - Orders"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "E-mail de lembrete enviado com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "E-mail de lembrete enviado para o cliente com sucesso."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pedido não encontrado.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Pedido com ID 123 não encontrado."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito (ex: o pedido não está pendente).",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "O pedido já foi concluído e não pode receber lembrete."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/orders/{id}": {
+      "get": {
+        "summary": "Obtém os detalhes de um pedido específico (Admin)",
+        "description": "(Admin) Retorna os detalhes completos de um pedido, incluindo números associados.",
+        "tags": [
+          "Admin - Orders"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do pedido."
+          },
+          "404": {
+            "description": "Pedido não encontrado."
+          }
+        }
+      },
+      "put": {
+        "summary": "Atualiza o status de um pedido (Admin)",
+        "description": "(Admin) Permite alterar o status de um pedido. Se um pedido pendente for alterado para 'completed', os números reservados serão marcados como 'sold'. Se alterado para 'failed' ou 'cancelled', serão libertados.",
+        "tags": [
+          "Admin - Orders"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "completed",
+                      "failed",
+                      "cancelled"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pedido atualizado com sucesso."
+          },
+          "400": {
+            "description": "Status inválido."
+          },
+          "409": {
+            "description": "Conflito, o pedido já foi processado ou está num estado que não permite alteração."
+          }
+        }
+      }
+    },
+    "/api/admin/orders": {
+      "get": {
+        "summary": "Lista todos os pedidos do sistema (Admin)",
+        "description": "(Admin) Retorna uma lista de todos os pedidos, juntando informações do utilizador e do produto.",
+        "tags": [
+          "Admin - Orders"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uma lista de todos os pedidos."
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado."
+          }
+        }
+      },
+      "post": {
+        "summary": "Marca uma ordem como completa (Admin)",
+        "description": "(Admin) Altera o status de uma ordem para 'completed' e o status dos seus números de 'reserved' para 'sold'. Útil para confirmar pagamentos manuais.",
+        "tags": [
+          "Admin - Orders"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "orderId"
+                ],
+                "properties": {
+                  "orderId": {
+                    "type": "integer",
+                    "description": "O ID da ordem a ser marcada como completa."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ordem atualizada com sucesso."
+          },
+          "400": {
+            "description": "ID da ordem não fornecido."
+          },
+          "404": {
+            "description": "Ordem não encontrada."
+          },
+          "409": {
+            "description": "Conflito, a ordem não pode ser marcada como completa (ex: não está pendente)."
+          }
+        }
+      }
+    },
     "/api/admin/products/{id}/draw": {
       "post": {
         "summary": "Realiza o sorteio de um produto",
@@ -327,9 +543,9 @@
     "/api/admin/users": {
       "get": {
         "summary": "Lista todos os usuários cadastrados (Admin)",
-        "description": "(Admin) Retorna uma lista de todos os usuários do sistema, incluindo seus IDs, nomes, emails e funções (roles).",
+        "description": "(Admin) Retorna uma lista de todos os usuários do sistema, incluindo seus IDs, nomes, emails e funções (roles).\n",
         "tags": [
-          "Admin"
+          "Admin - Users"
         ],
         "security": [
           {
@@ -385,6 +601,204 @@
           },
           "500": {
             "description": "Erro interno do servidor."
+          }
+        }
+      },
+      "post": {
+        "summary": "Cria um novo usuário (Admin)",
+        "description": "(Admin) Permite que um administrador crie uma nova conta de usuário, definindo nome, email, senha e função.\n",
+        "tags": [
+          "Admin - Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "password",
+                  "role"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Novo Usuário"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "novousuario@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "senha123",
+                    "minLength": 6
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "admin"
+                    ],
+                    "example": "user"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário criado com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Usuário criado com sucesso!"
+                    },
+                    "userId": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados de entrada inválidos (ex: email já existe, senha curta, role inválida).\n"
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado, não é um administrador."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "Busca as notificações do usuário logado",
+        "description": "Retorna uma lista de todas as notificações para o usuário autenticado, ordenadas das mais recentes para as mais antigas.",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso. Retorna as notificações.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "notifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "is_read": {
+                            "type": "boolean"
+                          },
+                          "link": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      },
+      "put": {
+        "summary": "Marca notificações como lidas",
+        "description": "Permite marcar uma ou todas as notificações do usuário como lidas.",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notificationIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Um array de IDs de notificações para marcar como lidas."
+                  },
+                  "mark_all_as_read": {
+                    "type": "boolean",
+                    "description": "Se verdadeiro, marca todas as notificações não lidas como lidas."
+                  }
+                },
+                "example": {
+                  "notificationIds": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "mark_all_as_read": false
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notificações atualizadas com sucesso."
+          },
+          "400": {
+            "description": "Requisição inválida."
+          },
+          "401": {
+            "description": "Não autenticado."
           }
         }
       }
@@ -718,6 +1132,70 @@
         }
       }
     },
+    "/api/users/change-password": {
+      "post": {
+        "summary": "Altera a senha do utilizador autenticado",
+        "description": "Permite que um utilizador logado altere a sua própria senha fornecendo a senha atual e a nova.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "newPassword",
+                  "confirmPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "description": "A senha atual do utilizador para verificação."
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 6,
+                    "description": "A nova senha desejada."
+                  },
+                  "confirmPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "description": "Confirmação da nova senha."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Senha alterada com sucesso."
+          },
+          "400": {
+            "description": "Dados inválidos (ex: senhas não coincidem)."
+          },
+          "401": {
+            "description": "Não autenticado."
+          },
+          "403": {
+            "description": "Acesso negado (ex: senha atual incorreta)."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
     "/api/users/login": {
       "post": {
         "summary": "Autentica um usuário",
@@ -881,8 +1359,120 @@
           }
         }
       }
+    },
+    "/api/users/reset-password": {
+      "post": {
+        "summary": "Redefine a senha de um utilizador",
+        "description": "Utiliza um token de redefinição para definir uma nova senha para a conta do utilizador.",
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "password"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "O token de redefinição recebido por e-mail."
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 6,
+                    "description": "A nova senha do utilizador."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Senha redefinida com sucesso."
+          },
+          "400": {
+            "description": "Dados inválidos (ex: token inválido ou expirado, senha curta)."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/api/winners": {
+      "get": {
+        "summary": "Lista os ganhadores dos sorteios finalizados",
+        "description": "Retorna uma lista de produtos com status 'drawn', incluindo o nome do produto, o número vencedor e o nome do ganhador.",
+        "tags": [
+          "Public"
+        ],
+        "responses": {
+          "200": {
+            "description": "Uma lista de sorteios finalizados e seus ganhadores.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "winners": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "product_id": {
+                            "type": "integer"
+                          },
+                          "product_name": {
+                            "type": "string"
+                          },
+                          "product_image_url": {
+                            "type": "string"
+                          },
+                          "winning_number": {
+                            "type": "integer"
+                          },
+                          "winner_name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "winners": [
+                    {
+                      "product_id": 101,
+                      "product_name": "iPhone 14 Pro Max",
+                      "product_image_url": "https://example.com/images/iphone14.jpg",
+                      "winning_number": 42,
+                      "winner_name": "João Silva"
+                    },
+                    {
+                      "product_id": 102,
+                      "product_name": "PlayStation 5",
+                      "product_image_url": "https://example.com/images/ps5.jpg",
+                      "winning_number": 7,
+                      "winner_name": "Maria Oliveira"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
     }
   },
-  "components": {},
   "tags": []
 }

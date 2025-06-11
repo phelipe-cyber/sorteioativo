@@ -1,22 +1,35 @@
-const { createSwaggerSpec } = require('next-swagger-doc');
+// generate-swagger.js
+const swaggerJSDoc = require('swagger-jsdoc');
 const fs = require('fs');
+const path = require('path');
 
-const spec = createSwaggerSpec({
+// Configurações do Swagger
+const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'API Site de Sorteio',
-      description: 'Documentação completa da API para o site de sorteios.',
+      title: 'API Sorteio Ativo',
       version: '1.0.0',
+      description: 'Documentação da API do Sorteio Ativo',
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
-  // Caminho para os arquivos de API
-  apiFolder: './src/app/api/',
-});
+  apis: ['./app/api/**/*.js'], // Altere para o caminho onde estão os comentários @swagger
+};
 
-// Escreve o arquivo swagger.json na pasta public
-fs.writeFileSync('./public/swagger.json', JSON.stringify(spec, null, 2));
+const swaggerSpec = swaggerJSDoc(options);
 
-console.log('Swagger spec gerado em ./public/swagger.json');
+// Salvar como swagger.json na pasta public
+const outputPath = path.join(__dirname, 'public', 'swagger.json');
+fs.writeFileSync(outputPath, JSON.stringify(swaggerSpec, null, 2));
 
-
+console.log('✅ swagger.json gerado com sucesso em /public/swagger.json');
