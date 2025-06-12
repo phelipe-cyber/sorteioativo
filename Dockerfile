@@ -1,7 +1,7 @@
 # Dockerfile
 
 # Passo 1: Use uma imagem base oficial do Node.js. A versão Alpine é leve.
-FROM node:18-alpine AS development
+FROM node:18-slim AS development
 
 # Passo 2: Defina o diretório de trabalho dentro do contêiner
 WORKDIR /app
