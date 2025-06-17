@@ -1,7 +1,7 @@
 // app/admin/users/page.jsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext'; 
 import Link from 'next/link'; // Importar Link
 import Spinner from '@/components/Spinner'; 
@@ -28,21 +28,18 @@ const IconFilter = () => (
       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
   </svg>
 );
-const IconArrowLeft = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="19" y1="12" x2="5" y2="12"></line>
-      <polyline points="12 19 5 12 12 5"></polyline>
-  </svg>
-);
+
 
 export default function AdminUsersPage() {
 const { token, user: adminUser } = useAuth(); 
 const [allUsers, setAllUsers] = useState([]);
-const [filteredUsers, setFilteredUsers] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
-const [filterRole, setFilterRole] = useState('all'); // Estado para o filtro de função
+
+// --- ESTADOS PARA FILTROS ---
+const [filterRole, setFilterRole] = useState('all');
+const [filterClientName, setFilterClientName] = useState('');
 
 const fetchUsers = useCallback(async () => {
   if (!token) return;
@@ -58,7 +55,6 @@ const fetchUsers = useCallback(async () => {
     }
     const data = await response.json();
     setAllUsers(data.users || []);
-    setFilteredUsers(data.users || []); // Inicialmente mostra todos
   } catch (err) {
     setError(err.message);
   } finally {
@@ -70,14 +66,15 @@ useEffect(() => {
   fetchUsers();
 }, [fetchUsers]);
 
-// Efeito para aplicar o filtro quando filterRole ou allUsers mudar
-useEffect(() => {
-  if (filterRole === 'all') {
-      setFilteredUsers(allUsers);
-  } else {
-      setFilteredUsers(allUsers.filter(user => user.role === filterRole));
-  }
-}, [filterRole, allUsers]);
+// --- LÓGICA DE FILTRAGEM ATUALIZADA ---
+const filteredUsers = useMemo(() => {
+  return allUsers.filter(user => {
+      const roleMatch = filterRole === 'all' || user.role === filterRole;
+      const nameMatch = !filterClientName || (user.name && user.name.toLowerCase().includes(filterClientName.toLowerCase()));
+      return roleMatch && nameMatch;
+  });
+}, [allUsers, filterRole, filterClientName]);
+
 
 const handleDeleteUser = async (userId, userName) => {
   if (!confirm(`Tem a certeza que deseja excluir o utilizador "${userName}" (ID: ${userId})? Esta ação é irreversível.`)) {
@@ -94,11 +91,16 @@ const handleDeleteUser = async (userId, userName) => {
       throw new Error(data.message || 'Falha ao excluir utilizador.');
     }
     setActionMessage({ type: 'success', text: data.message || 'Utilizador excluído com sucesso!' });
-    fetchUsers(); // Re-busca a lista de utilizadores
+    fetchUsers();
   } catch (err) {
     console.error(`Erro ao excluir utilizador ${userId}:`, err);
     setActionMessage({ type: 'error', text: err.message });
   }
+};
+
+const handleClearFilters = () => {
+  setFilterRole('all');
+  setFilterClientName('');
 };
 
 if (loading) {
@@ -115,27 +117,7 @@ return (
       <h1 className="text-2xl font-bold text-gray-800">
         Gestão de Utilizadores
       </h1>
-      <div className="mb-6">
-          <Link href="/admin/dashboard" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium group">
-              <IconArrowLeft />
-              <span className="group-hover:underline ml-1.5">Voltar ao Dashboard</span>
-          </Link>
-        </div>
       <div className="flex items-center gap-4">
-          {/* Filtro de Função */}
-          <div className="flex items-center gap-2">
-              <IconFilter className="text-gray-500"/>
-              <select 
-                  value={filterRole} 
-                  onChange={(e) => setFilterRole(e.target.value)}
-                  className="bg-white border border-gray-300 rounded-md shadow-sm py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                  <option value="all">Todas as Funções</option>
-                  <option value="admin">Administradores</option>
-                  <option value="user">Utilizadores</option>
-              </select>
-          </div>
-          {/* Botão Adicionar */}
           <Link 
             href="/admin/users/new" 
             className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm flex items-center text-sm"
@@ -146,6 +128,33 @@ return (
       </div>
     </div>
 
+    {/* --- BARRA DE FILTROS --- */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg bg-white shadow-sm">
+      <div className="md:col-span-1">
+          <label htmlFor="clientNameFilter" className="block text-sm font-medium text-gray-700">Filtrar por Nome</label>
+          <input type="text" id="clientNameFilter" value={filterClientName} onChange={(e) => setFilterClientName(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 sm:text-sm"
+              placeholder="Digite o nome do cliente..." />
+      </div>
+      <div className="md:col-span-1">
+          <label htmlFor="roleFilter" className="block text-sm font-medium text-gray-700">Filtrar por Função</label>
+          <select 
+              id="roleFilter"
+              value={filterRole} 
+              onChange={(e) => setFilterRole(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+              <option value="all">Todas as Funções</option>
+              <option value="admin">Administradores</option>
+              <option value="user">Utilizadores</option>
+          </select>
+      </div>
+      <div className="flex items-end">
+          <button onClick={handleClearFilters} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">Limpar Filtros</button>
+      </div>
+    </div>
+
+
     {actionMessage.text && (
       <div className={`p-3 mb-4 rounded-md text-sm ${actionMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
         {actionMessage.text}
@@ -155,7 +164,7 @@ return (
     {filteredUsers.length === 0 ? (
       <div className="text-center text-gray-500 py-10 bg-white rounded-lg shadow-sm">
           <h3 className="text-lg font-medium">Nenhum utilizador encontrado</h3>
-          <p className="mt-1 text-sm">Não há utilizadores que correspondam ao filtro selecionado.</p>
+          <p className="mt-1 text-sm">Não há utilizadores que correspondam aos filtros selecionados.</p>
       </div>
     ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -192,7 +201,6 @@ return (
                       onClick={() => handleDeleteUser(userItem.id, userItem.name)} 
                       className="flex-1 text-center text-red-600 hover:text-red-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-red-50 transition-colors text-sm font-medium"
                       title="Excluir Utilizador"
-                      // Não permitir auto-exclusão
                       disabled={adminUser?.id === userItem.id} 
                   >
                     <IconTrash />
