@@ -113,10 +113,20 @@ export async function GET(request) {
 
   try {
     const products = await query({ 
-      // Adicionado total_numbers à query de listagem para consistência
-      query: "SELECT id, name, description, price_per_number, image_url, status, created_at, winning_number, winner_user_id, total_numbers FROM products ORDER BY created_at DESC",
+      // --- CORREÇÃO AQUI: Adicionado LEFT JOIN para buscar o nome do ganhador ---
+      query: `
+        SELECT 
+            p.id, p.name, p.description, p.price_per_number, p.image_url, 
+            p.status, p.created_at, p.winning_number, p.winner_user_id, 
+            p.total_numbers,
+            u.name as winner_name 
+        FROM products p
+        LEFT JOIN users u ON p.winner_user_id = u.id
+        ORDER BY p.created_at DESC
+      `,
       values: [],
     });
+
     return NextResponse.json({ products });
 
   } catch (error) {

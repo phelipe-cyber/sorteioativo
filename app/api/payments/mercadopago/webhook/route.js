@@ -6,6 +6,18 @@ import { dbPool } from '@/app/lib/db'; // Ajuste o caminho se necessário
 import crypto from 'crypto';
 
 const WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET;
+// --- FUNÇÃO HELPER PARA LOGAR NO BANCO DE DADOS ---
+const logToDatabase = async (level, context, message, payload = null, userId = null, orderId = null) => {
+  try {
+    // Query atualizada para incluir order_id
+    const query = "INSERT INTO system_logs (level, context, message, payload, user_id, order_id) VALUES (?, ?, ?, ?, ?, ?)";
+    const values = [level, context, message, payload ? JSON.stringify(payload) : null, userId, orderId];
+    await dbPool.execute(query, values);
+  } catch (dbError) {
+    console.error("FALHA CRÍTICA AO LOGAR NO BANCO DE DADOS:", dbError);
+    console.error("Log Original:", { level, context, message, payload, userId, orderId });
+  }
+};
 
 // Função verifySignature (como estava antes, com os logs)
 const verifySignature = (request, rawBody) => {
@@ -77,7 +89,6 @@ const verifySignature = (request, rawBody) => {
   return signaturesMatch;
 };
 
-
 export async function POST(request) {
   console.log('--- INÍCIO DA REQUISIÇÃO WEBHOOK MERCADO PAGO ---');
   
@@ -85,155 +96,103 @@ export async function POST(request) {
   let rawBody;
   try {
     rawBody = await request.text();
-    // console.log('MP Webhook v2: Corpo RAW (preview):', rawBody.substring(0, 200) + "...");
-  } catch (e) { // Usando 'e'
-    console.error('MP Webhook v2: Erro ao ler o corpo da requisição como texto:', e);
-    return new NextResponse(JSON.stringify({ message: 'Erro ao processar corpo da requisição.' }), {
-      status: 400, 
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (e) {
+    await logToDatabase('ERROR', 'webhook-body-read', e.message, { error: e.toString() });
+    return new NextResponse(JSON.stringify({ message: 'Erro ao processar corpo da requisição.' }), { status: 400 });
   }
   
   if (!verifySignature(requestCloneForHeaders, rawBody)) { 
-    console.error('MP Webhook v2: FALHA NA ASSINATURA! Rejeitando.');
-    return new NextResponse(JSON.stringify({ message: 'Assinatura inválida.' }), {
-      status: 401, 
-      headers: { 'Content-Type': 'application/json' },
-    });
+    await logToDatabase('ERROR', 'webhook-signature', 'Falha na verificação da assinatura', { headers: JSON.stringify(Object.fromEntries(request.headers)) });
+    return new NextResponse(JSON.stringify({ message: 'Assinatura inválida.' }), { status: 401 });
   }
-  console.log('MP Webhook v2: Assinatura verificada com SUCESSO. Prosseguindo com o processamento.');
-
-
+  
   let body;
-
   try {
     body = JSON.parse(rawBody);
-    // console.log('MP Webhook v2: Corpo parseado após verificação:', JSON.stringify(body, null, 2));
-  } catch (e) { // Usando 'e'
-    console.error('MP Webhook v2: Erro ao parsear rawBody para JSON após verificação:', e);
-    return new NextResponse(JSON.stringify({ message: 'Corpo da requisição inválido após verificação de assinatura.' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (e) {
+    await logToDatabase('ERROR', 'webhook-body-parse', e.message, { rawBody: rawBody.substring(0, 500) });
+    return new NextResponse(JSON.stringify({ message: 'Corpo da requisição inválido.' }), { status: 400 });
   }
 
-  // Se 'type' e 'action' não são usados diretamente na lógica abaixo, podem ser removidos da desestruturação.
-  // Por enquanto, vamos mantê-los para o log, mas se o ESLint ainda reclamar, remova-os.
-  const { data } = body; 
-  let paymentId;
-  // ... (lógica para extrair paymentId)
+  const { data } = body;
+  let paymentId = data?.id;
 
-  if (data?.id) { 
-    paymentId = data.id;
-  } else if (action?.startsWith('payment.')) { // 'action' é usado aqui
-    if (body.resource) { 
-        const urlParts = body.resource.split('/');
-        paymentId = urlParts[urlParts.length -1];
-    }
-    else if (data?.id) { 
-        paymentId = data.id;
-    }
+  if (!paymentId) {
+    await logToDatabase('WARN', 'webhook-no-payment-id', 'Webhook recebido sem ID de pagamento.', body);
+    return NextResponse.json({ message: 'Evento recebido, mas sem ID de pagamento para processar.' }, { status: 200 });
   }
-
-  if (!paymentId) { 
-    console.log('MP Webhook v2: ID do pagamento não encontrado. Type:', type, 'Action:', action, 'Data:', data); // 'type' e 'action' usados no log
-    return NextResponse.json({ message: 'ID do pagamento não encontrado ou evento não processável.' }, { status: 200 });
-   }
     
-  console.log(`MP Webhook v2: Processando pagamento ID: ${paymentId}`);
-
   let connection;
+  let userIdForLogging = null;
+  let orderIdForLogging = null; // Variável para armazenar o orderId para os logs
   try {
     const paymentHttpClient = new Payment(mpClient);
     const paymentInfo = await paymentHttpClient.get({ id: String(paymentId) }); 
-    console.log('MP Webhook v2: Info Pagamento MP:', JSON.stringify(paymentInfo, null, 2));
+    const { status: mpStatus, external_reference, id: mp_payment_id } = paymentInfo;
+    const internalOrderId = parseInt(external_reference, 10);
+    orderIdForLogging = internalOrderId; // Captura o orderId para usar nos logs
 
-    if (paymentInfo) {
-      const { status: mpStatus, external_reference, id: mp_payment_id } = paymentInfo;
-      const internalOrderId = parseInt(external_reference, 10);
-
-      if (isNaN(internalOrderId) || internalOrderId <= 0) {
-        console.error(`MP Webhook v2: external_reference (internalOrderId) inválido: ${external_reference}`);
-        return NextResponse.json({ message: 'Referência externa inválida.' }, { status: 200 });
-       }
+    if (isNaN(internalOrderId) || internalOrderId <= 0) {
+      await logToDatabase('ERROR', 'webhook-invalid-ref', 'Referência externa inválida no pagamento do MP.', { paymentId, external_reference }, null, orderIdForLogging);
+      return NextResponse.json({ message: 'Referência externa inválida.' }, { status: 200 });
+    }
       
-      connection = await dbPool.getConnection();
-      await connection.beginTransaction();
+    connection = await dbPool.getConnection();
+    await connection.beginTransaction();
 
-      const [currentOrderRows] = await connection.execute(
-          "SELECT status, user_id, product_id FROM orders WHERE id = ?",
-          [internalOrderId]
-      );
+    const [orderRows] = await connection.execute("SELECT status, user_id, product_id FROM orders WHERE id = ?", [internalOrderId]);
 
-      if (currentOrderRows.length === 0) { 
-        console.error(`MP Webhook v2: Pedido interno ${internalOrderId} não encontrado.`);
-        await connection.rollback();
-        return NextResponse.json({ message: 'Pedido interno não encontrado.' }, { status: 200 });
-       }
+    if (orderRows.length === 0) { 
+      await connection.rollback();
+      await logToDatabase('WARN', 'webhook-order-not-found', `Pedido interno ${internalOrderId} não encontrado.`, { paymentId }, null, orderIdForLogging);
+      return NextResponse.json({ message: 'Pedido interno não encontrado.' }, { status: 200 });
+    }
       
-      const currentOrder = currentOrderRows[0];
-      const currentOrderStatusInDb = currentOrder.status;
-      
-      console.log(`MP Webhook v2: Pedido ${internalOrderId} no DB: ${currentOrderStatusInDb}. Status MP: ${mpStatus}`);
+    const currentOrder = orderRows[0];
+    const currentOrderStatusInDb = currentOrder.status;
+    userIdForLogging = currentOrder.user_id; // Captura o user_id para os logs
 
-      if (currentOrderStatusInDb === 'completed' && mpStatus === 'approved') { /* ... */ }
-
-      let newOrderStatusInDb = currentOrderStatusInDb;
-      if (mpStatus === 'approved') {
-        newOrderStatusInDb = 'completed';
-      } else if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(mpStatus)) {
-        newOrderStatusInDb = 'failed'; 
-      } else if (['pending', 'in_process', 'authorized'].includes(mpStatus)) {
-        newOrderStatusInDb = 'pending';
-      }
-
-      if (newOrderStatusInDb !== currentOrderStatusInDb) {
-        await connection.execute(
-          "UPDATE orders SET status = ?, payment_details = CONCAT_WS('\\n', payment_details, ?) WHERE id = ?",
-          [newOrderStatusInDb, `MP Payment ID: ${mp_payment_id}, MP Status: ${mpStatus}, WebhookTS: ${new Date().toISOString()}`, internalOrderId]
-        );
-        console.log(`MP Webhook v2: Pedido ${internalOrderId} atualizado para status DB '${newOrderStatusInDb}'.`);
-
-        // --- LÓGICA PARA ATUALIZAR raffle_numbers ---
-        if (newOrderStatusInDb === 'completed' && currentOrderStatusInDb !== 'completed') {
-          // Pagamento aprovado, marcar números como 'sold'
-          // O user_id e product_id já estão corretos nos números reservados
-          const [updateSoldResult] = await connection.execute(
-            "UPDATE raffle_numbers SET status = 'sold', reserved_at = NULL WHERE order_id = ? AND status = 'reserved'",
-            [internalOrderId]
-          );
-          console.log(`MP Webhook v2: ${updateSoldResult.affectedRows} números para o pedido ${internalOrderId} marcados como 'sold'.`);
-        } else if (newOrderStatusInDb === 'failed' && (currentOrderStatusInDb === 'pending' || currentOrderStatusInDb === 'reserved')) {
-          // Pagamento falhou, liberar números reservados
-          const [updateAvailableResult] = await connection.execute(
-            "UPDATE raffle_numbers SET status = 'available', user_id = NULL, order_id = NULL, reserved_at = NULL WHERE order_id = ? AND status = 'reserved'",
-            [internalOrderId]
-          );
-          console.log(`MP Webhook v2: ${updateAvailableResult.affectedRows} números para o pedido ${internalOrderId} liberados (status 'available').`);
-        }
-        // --- FIM DA LÓGICA PARA ATUALIZAR raffle_numbers ---
-
-      } else { 
-        /* ... (log de status já reflete) ... */
-        console.log(`MP Webhook v2: Status do pedido ${internalOrderId} no DB ('${currentOrderStatusInDb}') já reflete o status do MP ('${mpStatus}') ou não requer atualização.`);
-      }
-
+    if (currentOrderStatusInDb === 'completed') {
       await connection.commit();
-      return NextResponse.json({ message: 'Webhook processado com sucesso.' }, { status: 200 });
-    } else { 
-      /* ... (pagamento não encontrado no MP) ... */ 
-      console.error('MP Webhook v2: Informação do pagamento não encontrada na resposta do MP para ID:', paymentId);
-      return NextResponse.json({ message: 'Pagamento não encontrado no Mercado Pago (resposta vazia).' }, { status: 200 });
-    }  
-  } catch (error) {  if (connection) await connection.rollback();
-    const errorMessage = error.cause?.message || error.data?.message || error.message || 'Erro desconhecido no processamento do webhook';
-    console.error('MP Webhook v2: Erro CRÍTICO ao processar webhook:', error.cause || error.data || e); // Usando 'e'
-    return new NextResponse(JSON.stringify({ message: 'Erro interno crítico no webhook.', details: errorMessage }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
-   }
-  finally {
+      return NextResponse.json({ message: 'Pedido já processado e completo.' });
+    }
+
+    let newOrderStatusInDb = currentOrderStatusInDb;
+    if (mpStatus === 'approved') newOrderStatusInDb = 'completed';
+    else if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(mpStatus)) newOrderStatusInDb = 'failed';
+    else if (['pending', 'in_process', 'authorized'].includes(mpStatus)) newOrderStatusInDb = 'pending';
+
+    if (newOrderStatusInDb !== currentOrderStatusInDb) {
+      await logToDatabase('INFO', 'webhook-status-change', `Pedido ${internalOrderId} mudou de ${currentOrderStatusInDb} para ${newOrderStatusInDb}`, { paymentId, mpStatus }, userIdForLogging, orderIdForLogging);
+
+      await connection.execute(
+        "UPDATE orders SET status = ?, payment_details = CONCAT_WS('\\n', payment_details, ?) WHERE id = ?",
+        [newOrderStatusInDb, `MP Payment ID: ${mp_payment_id}, MP Status: ${mpStatus}, WebhookTS: ${new Date().toISOString()}`, internalOrderId]
+      );
+      
+      if (newOrderStatusInDb === 'completed') {
+        const [updateSoldResult] = await connection.execute(
+          "UPDATE raffle_numbers SET status = 'sold', reserved_at = NULL WHERE order_id = ? AND status = 'reserved'",
+          [internalOrderId]
+        );
+        await logToDatabase('INFO', 'webhook-numbers-sold', `${updateSoldResult.affectedRows} números marcados como 'sold'.`, { orderId: internalOrderId }, userIdForLogging, orderIdForLogging);
+      } else if (newOrderStatusInDb === 'failed') { 
+        const [releaseResult] = await connection.execute(
+          "UPDATE raffle_numbers SET status = 'available', user_id = NULL, order_id = NULL, reserved_at = NULL WHERE order_id = ? AND status = 'reserved'",
+          [internalOrderId]
+        );
+        await logToDatabase('INFO', 'webhook-numbers-released', `${releaseResult.affectedRows} números libertados.`, { orderId: internalOrderId }, userIdForLogging, orderIdForLogging);
+      }
+    }
+    
+    await connection.commit();
+    return NextResponse.json({ message: 'Webhook processado com sucesso.' }, { status: 200 });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    const errorMessage = error.cause?.message || error.data?.message || error.message || 'Erro desconhecido';
+    await logToDatabase('ERROR', 'webhook-critical-error', errorMessage, { paymentId, error: error.toString() }, userIdForLogging, orderIdForLogging);
+    return new NextResponse(JSON.stringify({ message: 'Erro interno crítico no webhook.', details: errorMessage }), { status: 500 });
+  } finally {
       if (connection) connection.release();
-      console.log('--- FIM DA REQUISIÇÃO WEBHOOK MERCADO PAGO ---');
   }
 }
