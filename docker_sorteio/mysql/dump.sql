@@ -79,3 +79,27 @@ CREATE TABLE `password_reset_tokens` (
   KEY `fk_password_reset_user_id_idx` (`user_id`),
   CONSTRAINT `fk_password_reset_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+CREATE TABLE `system_logs` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `level` VARCHAR(10) NOT NULL,
+  `context` VARCHAR(50) NOT NULL,
+  `message` TEXT NOT NULL,
+  `payload` JSON NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `user_id` INT NULL DEFAULT NULL,
+  `order_id` INT NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_log_user_id_idx` (`user_id` ASC),
+  INDEX `fk_log_order_id_idx` (`order_id` ASC),
+  CONSTRAINT `fk_log_user_id`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_log_order_id`
+    FOREIGN KEY (`order_id`)
+    REFERENCES `orders` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE NO ACTION
+);

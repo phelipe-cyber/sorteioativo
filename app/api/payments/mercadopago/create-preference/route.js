@@ -82,15 +82,19 @@ export async function POST(request) {
       // }
     }
 
-    if (!internalOrderId) { // Se não reutilizou um existente, cria um novo
+    // --- LÓGICA DE SALVAR OS NÚMEROS COMO JSON ---
+    if (!internalOrderId) {
+      // Salvar os números selecionados como uma string JSON
+      const selectedNumbersJson = JSON.stringify(selectedNumbers.sort((a, b) => a - b));
+
       const [orderResult] = await connection.execute(
-        "INSERT INTO orders (user_id, product_id, total_amount, status, payment_details) VALUES (?, ?, ?, 'pending', 'Mercado Pago Iniciado')",
-        [userId, productId, totalAmount]
+        "INSERT INTO orders (user_id, product_id, total_amount, status, payment_details, pending_selected_numbers) VALUES (?, ?, ?, 'pending', 'Mercado Pago Iniciado', ?)",
+        [userId, productId, totalAmount, selectedNumbersJson] // Adicionado selectedNumbersJson
       );
       internalOrderId = orderResult.insertId;
-      console.log(`API create-preference: Novo pedido ${internalOrderId} criado com status 'pending'.`);
+      console.log(`API create-preference: Novo pedido ${internalOrderId} criado com status 'pending' e números pendentes: ${selectedNumbersJson}.`);
     }
-
+    
     const placeholders = selectedNumbers.map(() => '?').join(',');
     // Seleciona também o user_id para a verificação de reserva
     const [numberRows] = await connection.execute(

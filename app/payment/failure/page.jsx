@@ -56,7 +56,7 @@ function FailureContent() {
       {collectionStatus && collectionStatus !== mpStatus && <p className="text-sm text-gray-500 mb-4">Status Coleção MP: {collectionStatus}</p>}
       
       <p className="text-gray-600 mb-6">
-        Por favor, verifique os dados do seu pagamento ou tente um método diferente.
+        Por favor, refazer o pedido novamente por questão de segurança.
       </p>
 
       <div className="space-y-3">
@@ -65,7 +65,7 @@ function FailureContent() {
             onClick={() => router.push(`/my-numbers?filter=pending`)} 
             className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-colors"
           >
-            Ver Meus Pedidos e Tentar Novamente
+            Ver Meus Pedidos
           </button>
         ) : isAuthenticated && !orderId ? (
            <Link href="/my-numbers" className="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-colors">

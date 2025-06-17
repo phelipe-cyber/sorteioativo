@@ -6,268 +6,262 @@ import { useAuth } from '@/context/AuthContext'; // Ajuste o caminho
 import Link from 'next/link';
 import Spinner from '@/components/Spinner'; // Ajuste o caminho
 import { useRouter } from 'next/navigation';
-// Ícone SVG para Editar (reutilizado da página de usuários)
+
+// --- ÍCONES PARA A PÁGINA ---
 const IconEdit = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+  </svg>
 );
-
-// Ícone SVG para Sortear (exemplo: um ícone de "play" ou "estrela/presente")
-const IconDraw = () => ( // Usando um ícone de "play" como exemplo para "iniciar sorteio"
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-    </svg>
+const IconDraw = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+  </svg>
 );
-
-// Ícone SVG para Adicionar Produto (exemplo)
 const IconProductPlus = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <path d="M16 10a4 4 0 0 1-8 0"></path>
-        <line x1="12" y1="14" x2="12" y2="22"></line> {/* Simbolizando adição para baixo, como em uma caixa */}
-        <line x1="9" y1="18" x2="15" y2="18"></line>
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <path d="M16 10a4 4 0 0 1-8 0"></path>
+      <line x1="12" y1="14" x2="12" y2="22"></line>
+      <line x1="9" y1="18" x2="15" y2="18"></line>
+  </svg>
 );
-
+const IconCheckCircle = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+const IconAlertCircle = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+const IconFilter = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+  </svg>
+);
+const IconArrowLeft = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+  </svg>
+);
 const Notification = ({ title, message, type, onDismiss }) => {
-  const isError = type === 'error';
-  const bgColor = isError ? 'bg-red-50' : 'bg-green-50';
-  const borderColor = isError ? 'border-red-200' : 'border-green-200';
-  const textColor = isError ? 'text-red-800' : 'text-green-800';
-  const iconColor = isError ? 'text-red-500' : 'text-green-500';
-  
-  return (
-    <div className={`flex items-start justify-between gap-4 p-4 mb-6 rounded-lg border ${bgColor} ${borderColor} shadow-md`}>
-      <div className="flex items-start gap-3">
-        <div className={`flex-shrink-0 ${iconColor}`}>
-          {isError ? <IconAlertCircle /> : <IconCheckCircle />}
-        </div>
-        <div className={`text-sm ${textColor}`}>
-          <p className="font-semibold">{title}</p>
-          <p>{message}</p>
-        </div>
-      </div>
-      <button onClick={onDismiss} className={`text-2xl font-bold opacity-70 hover:opacity-100 ${textColor}`} aria-label="Fechar notificação">&times;</button>
+const isError = type === 'error';
+const bgColor = isError ? 'bg-red-50' : 'bg-green-50';
+const borderColor = isError ? 'border-red-200' : 'border-green-200';
+const textColor = isError ? 'text-red-800' : 'text-green-800';
+const iconColor = isError ? 'text-red-500' : 'text-green-500';
+
+return (
+  <div className={`flex items-start justify-between gap-4 p-4 mb-6 rounded-lg border ${bgColor} ${borderColor} shadow-md`}>
+    <div className="flex items-start gap-3">
+      <div className={`flex-shrink-0 ${iconColor}`}>{isError ? <IconAlertCircle /> : <IconCheckCircle />}</div>
+      <div className={`text-sm ${textColor}`}><p className="font-semibold">{title}</p><p>{message}</p></div>
     </div>
-  );
+    <button onClick={onDismiss} className={`text-2xl font-bold opacity-70 hover:opacity-100 ${textColor}`} aria-label="Fechar notificação">&times;</button>
+  </div>
+);
 };
 
+
 export default function AdminProductsListPage() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [drawingProductId, setDrawingProductId] = useState(null); 
-  const [drawResult, setDrawResult] = useState(null); 
-  const [drawError, setDrawError] = useState(null);   
+const { token } = useAuth();
+const [allProducts, setAllProducts] = useState([]); // Armazena todos os produtos
+const [filteredProducts, setFilteredProducts] = useState([]); // Armazena os produtos filtrados
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState('');
+const [drawingProductId, setDrawingProductId] = useState(null); 
+const [drawResult, setDrawResult] = useState(null); 
+const [drawError, setDrawError] = useState(null);
+// --- NOVO ESTADO PARA O FILTRO ---
+const [filterStatus, setFilterStatus] = useState('all');
 
-  const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
-  const router = useRouter();
-  useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated || user?.role !== 'admin') {
-        router.push('/login');
-      }
+const fetchProducts = useCallback(async () => {
+  if (!token) return; 
+  setLoading(true);
+  setError(''); 
+  try {
+    const response = await fetch('/api/admin/products', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.message || `Erro ${response.status}`);
     }
-  }, [user, authLoading, isAuthenticated, router]);
-
-  const fetchProducts = useCallback(async () => {
-    if (!token) return; 
-
-    setLoading(true);
-    setError('');
-    setDrawResult(null); 
-    setDrawError(null);
-    try {
-      const response = await fetch('/api/admin/products', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || `Erro ${response.status}`);
-      }
-      const data = await response.json();
-      setProducts(data.products || []);
-    } catch (err) {
-      console.error("Falha ao buscar produtos para admin:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]); 
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]); 
-
-  const handleDraw = async (productId) => {
-    if (!confirm(`Você tem certeza que deseja realizar o sorteio para o produto ID ${productId}? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
-
-    setDrawingProductId(productId);
-    setDrawResult(null);
-    setDrawError(null);
-
-    try {
-      const response = await fetch(`/api/admin/products/${productId}/draw`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json', 
-        },
-      });
-
-      const data = await response.json(); 
-
-      if (!response.ok) {
-        throw new Error(data.message || `Falha ao realizar o sorteio. Status: ${response.status}`);
-      }
-
-      setDrawResult({ 
-        productId, 
-        message: data.message, 
-        winningNumber: data.winningNumber, 
-        winningUserId: data.winningUserId 
-      });
-      fetchProducts(); 
-
-    } catch (err) {
-      console.error("Erro ao sortear:", err);
-      setDrawError({ productId, message: err.message });
-    } finally {
-      setDrawingProductId(null);
-    }
-  };
-  
-  if (loading && products.length === 0) { 
-    return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
-        <Spinner size="h-12 w-12" />
-        <p className="ml-3 text-lg">Carregando produtos...</p>
-      </div>
-    );
+    const data = await response.json();
+    setAllProducts(data.products || []); // Guarda a lista completa
+    setFilteredProducts(data.products || []); // Inicialmente mostra todos
+  } catch (err) {
+    console.error("Falha ao buscar produtos para admin:", err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
   }
+}, [token]); 
 
+useEffect(() => {
+  fetchProducts();
+}, [fetchProducts]); 
+
+// --- EFEITO PARA APLICAR O FILTRO ---
+useEffect(() => {
+  if (filterStatus === 'all') {
+    setFilteredProducts(allProducts);
+  } else {
+    setFilteredProducts(allProducts.filter(p => p.status === filterStatus));
+  }
+}, [filterStatus, allProducts]);
+
+
+const handleDraw = async (productId) => {
+  if (!confirm(`Você tem certeza que deseja realizar o sorteio para o produto ID ${productId}? Esta ação não pode ser desfeita.`)) {
+    return;
+  }
+  setDrawingProductId(productId);
+  setDrawResult(null);
+  setDrawError(null);
+  try {
+    const response = await fetch(`/api/admin/products/${productId}/draw`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    const data = await response.json(); 
+    if (!response.ok) {
+      throw new Error(data.message || `Falha ao realizar o sorteio. Status: ${response.status}`);
+    }
+    setDrawResult({ 
+      productId, 
+      message: data.message, 
+      winningNumber: data.winningNumber, 
+      winnerName: data.winnerName,
+      winningUserId: data.winningUserId 
+    });
+    fetchProducts(); 
+  } catch (err) {
+    console.error("Erro ao sortear:", err);
+    setDrawError({ productId, message: err.message });
+  } finally {
+    setDrawingProductId(null);
+  }
+};
+
+const getStatusClass = (status) => {
+  switch (status) {
+    case 'active': return 'bg-green-100 text-green-800';
+    case 'upcoming': return 'bg-yellow-100 text-yellow-800';
+    case 'drawn': return 'bg-blue-100 text-blue-800';
+    default: return 'bg-red-100 text-red-800';
+  }
+};
+
+if (loading) { 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-indigo-700">
-          Gerenciar Produtos e Sorteios
-        </h1>
-        {/* --- BOTÃO MELHORADO --- */}
-        <Link 
-          href="/admin/products/new" 
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-5 rounded-lg shadow-md flex items-center text-base transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-        >
-          <IconProductPlus />
-          <span className="ml-2">Adicionar Novo Produto</span>
-        </Link>
-      </div>
-
-{/* --- RENDERIZAÇÃO DA NOTIFICAÇÃO MELHORADA --- */}
-{drawError && (
-        <Notification 
-          type="error"
-          title="Ocorreu um Erro"
-          message={`Ao sortear produto ID ${drawError.productId}: ${drawError.message}`}
-          onDismiss={() => setDrawError(null)}
-        />
-      )}
-      {drawResult && (
-        <Notification 
-          type="success"
-          title="Sorteio Realizado!"
-          message={`O ganhador do produto ID ${drawResult.productId} é ${drawResult.winnerName} (ID: ${drawResult.winningUserId}) com o número ${String(drawResult.winningNumber).padStart(2,'0')}. Uma notificação foi enviada.`}
-          onDismiss={() => setDrawResult(null)}
-        />
-      )}
-      {error && ( 
-         <p className="text-center text-red-500 bg-red-100 p-4 rounded-md mb-4">Erro ao carregar lista de produtos: {error}</p>
-      )}
-
-      {products.length === 0 && !loading && !error ? (
-        <p className="text-center text-gray-500 py-8">Nenhum produto cadastrado ainda.</p>
-      ) : products.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preço/Nº</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Criação</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{product.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {parseFloat(product.price_per_number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${product.status === 'active' ? 'bg-green-100 text-green-800' : 
-                        product.status === 'upcoming' ? 'bg-yellow-100 text-yellow-800' : 
-                        product.status === 'drawn' ? 'bg-blue-100 text-blue-800' : 
-                        'bg-red-100 text-red-800'}`}>
-                      {product.status}
-                    </span>
-                     {product.status === 'drawn' && product.winning_number !== null && (
-                        <span className="ml-2 text-xs text-blue-700">(Nº {String(product.winning_number).padStart(2, '0')})</span>
-                     )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {new Date(product.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Link 
-                        href={`/admin/products/edit/${product.id}`} 
-                        className="text-indigo-600 hover:text-indigo-900 mr-3 transition-colors inline-flex items-center"
-                        title="Editar Produto"
-                    >
-                      <IconEdit />
-                      <span className="ml-1 sm:ml-2 hidden sm:inline">Editar</span>
-                    </Link>
-                    
-                    {product.status === 'active' && (
-                      <button 
-                        onClick={() => handleDraw(product.id)} 
-                        className="text-purple-600 hover:text-purple-900 disabled:text-gray-400 disabled:cursor-not-allowed inline-flex items-center"
-                        disabled={drawingProductId === product.id} 
-                        title="Sortear Vencedor"
-                      >
-                        {drawingProductId === product.id ? (
-                          <>
-                            <Spinner size="h-4 w-4" color="border-purple-600" />
-                            <span className="ml-1 sm:ml-2">Sorteando...</span>
-                          </>
-                        ) : (
-                          <>
-                            <IconDraw />
-                            <span className="ml-1 sm:ml-2 hidden sm:inline">Sortear</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                    {product.status === 'drawn' && (
-                        <span className="text-gray-500 text-xs italic">Sorteado</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+    <div className="flex justify-center items-center h-full py-10">
+      <Spinner size="h-10 w-10" />
+      <p className="ml-3 text-lg">A carregar produtos...</p>
     </div>
   );
+}
+
+return (
+  <div className="bg-gray-50 p-4 sm:p-6 rounded-xl">
+    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <h1 className="text-2xl font-bold text-gray-800">Gerenciar Produtos</h1>
+        <div className="mb-6">
+          <Link href="/admin/dashboard" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium group">
+              <IconArrowLeft />
+              <span className="group-hover:underline ml-1.5">Voltar ao Dashboard</span>
+          </Link>
+        </div>
+        <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+                <IconFilter className="text-gray-500" />
+                <select 
+                    value={filterStatus} 
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="bg-white border border-gray-300 rounded-md shadow-sm py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                    <option value="all">Todos os Status</option>
+                    <option value="active">Ativos</option>
+                    <option value="upcoming">Próximos</option>
+                    <option value="drawn">Sorteados</option>
+                    <option value="cancelled">Cancelados</option>
+                </select>
+            </div>
+
+            {/* --- BOTÃO "ADICIONAR PRODUTO" AJUSTADO --- */}
+            <Link 
+              href="/admin/products/new" 
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg shadow-md flex items-center text-sm transition-colors"
+            >
+              <IconProductPlus />
+              {/* O texto "Adicionar Novo Produto" agora só aparece em ecrãs maiores que 'sm' */}
+              <span className="ml-2 hidden sm:inline">Adicionar Novo</span>
+            </Link>
+        </div>
+      </div>
+
+
+    {drawError && <Notification type="error" title="Ocorreu um Erro" message={`Ao sortear produto ID ${drawError.productId}: ${drawError.message}`} onDismiss={() => setDrawError(null)} />}
+    {drawResult && <Notification type="success" title="Sorteio Realizado!" message={`O ganhador do produto ID ${drawResult.productId} é ${drawResult.winnerName} (ID: ${drawResult.winningUserId}) com o número ${String(drawResult.winningNumber).padStart(2,'0')}. Notificação enviada.`} onDismiss={() => setDrawResult(null)} />}
+    {error && <p className="text-center text-red-500 bg-red-100 p-4 rounded-md mb-4">Erro ao carregar lista de produtos: {error}</p>}
+
+    {filteredProducts.length === 0 && !loading ? (
+      <div className="text-center text-gray-500 py-10 bg-white rounded-lg shadow-sm">
+          <h3 className="text-lg font-medium">Nenhum produto encontrado</h3>
+          <p className="mt-1 text-sm">Não há produtos que correspondam ao filtro selecionado.</p>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {filteredProducts.map((product) => (
+           <div key={product.id} className="bg-white p-5 rounded-lg shadow-md border border-gray-200 flex flex-col justify-between">
+           <div>
+             <div className="flex justify-between items-start mb-3">
+               <h3 className="font-semibold text-gray-800 truncate pr-2" title={product.name}>
+                   {product.name}
+               </h3>
+               <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(product.status)}`}>
+                   {product.status}
+               </span>
+             </div>
+             <img 
+                 src={product.image_url || 'https://placehold.co/400x300/e2e8f0/64748b?text=Sem+Imagem'}
+                 alt={product.name}
+                 className="w-full h-32 object-cover rounded-md mb-3 bg-gray-100"
+             />
+             <div className="text-sm text-gray-600 space-y-1 mb-4 border-t pt-3">
+                 <p><strong>Preço/Nº:</strong> {parseFloat(product.price_per_number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                 <p><strong>Total de Números:</strong> 0 a {product.total_numbers}</p>
+                 <p><strong>Criado em:</strong> {new Date(product.created_at).toLocaleDateString('pt-BR')}</p>
+                 {product.status === 'drawn' && (
+                     <p className="font-semibold"><strong>Ganhador:</strong> <span className="text-green-600">{product.winner_name || 'N/A'}</span> com o nº <span className="text-indigo-600">{String(product.winning_number).padStart(2,'0')}</span></p>
+                 )}
+             </div>
+           </div>
+
+           <div className="flex items-center gap-4 mt-auto border-t pt-3">
+             <Link href={`/admin/products/edit/${product.id}`} className="flex-1 text-center text-indigo-600 hover:text-indigo-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-indigo-50 transition-colors text-sm font-medium">
+               <IconEdit /><span>Editar</span>
+             </Link>
+             {product.status === 'active' && (
+               <button
+                 onClick={() => handleDraw(product.id)}
+                 disabled={drawingProductId === product.id}
+                 className="flex-1 text-center text-purple-600 hover:text-purple-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-wait text-sm font-medium"
+               >
+                 {drawingProductId === product.id ? <Spinner size="h-4 w-4" color="border-purple-600" /> : <IconDraw />}
+                 <span>{drawingProductId === product.id ? 'Sorteando...' : 'Sortear'}</span>
+               </button>
+             )}
+           </div>
+         </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
 }

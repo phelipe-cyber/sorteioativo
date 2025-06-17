@@ -44,15 +44,18 @@ import { sendPaymentReminderEmail } from '@/app/lib/mailer'; // Ajuste o caminho
 
 
 export async function POST(request, { params }) {
+  console.log("--- INÍCIO: API /remind ---");
   const authResult = await verifyAdminAuth(request);
   if (!authResult.isAuthenticated) {
     return authResult.error;
   }
 
   const orderId = params.id;
+  console.log(`API Remind: Tentando enviar lembrete para o pedido ID: ${orderId}`);
   
   try {
     // 1. Buscar detalhes do pedido, do utilizador e do produto
+    console.log("API Remind: Buscando dados do pedido no banco...");
     const [order] = await query({
       query: `
         SELECT 
@@ -68,11 +71,14 @@ export async function POST(request, { params }) {
     });
 
     if (!order) {
+      console.error(`API Remind: Pedido ${orderId} não encontrado.`);
       return new NextResponse(JSON.stringify({ message: 'Pedido não encontrado.' }), 
         { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
+    console.log(`API Remind: Dados do pedido ${orderId} encontrados. Status: ${order.status}`);
 
     if (order.status !== 'pending') {
+      console.warn(`API Remind: Pedido ${orderId} não está pendente.`);
       return new NextResponse(JSON.stringify({ message: 'Só é possível enviar lembretes para pedidos pendentes.' }), 
         { status: 409, headers: { 'Content-Type': 'application/json' } });
     }
@@ -85,28 +91,32 @@ export async function POST(request, { params }) {
     const reservedNumbers = reservedNumbersRows.map(n => n.number_value);
 
     if (reservedNumbers.length === 0) {
+        console.warn(`API Remind: Nenhum número reservado encontrado para o pedido ${orderId}.`);
         return new NextResponse(JSON.stringify({ message: 'Nenhum número reservado encontrado para este pedido pendente.' }), 
             { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
+    console.log(`API Remind: Números reservados encontrados: ${reservedNumbers.join(', ')}`);
 
-    // 3. Montar o link de pagamento (leva de volta à página do produto)
-    const paymentLink = `${process.env.APP_URL}/my-numbers/`;
+    // 3. Montar o link de pagamento
+    const paymentLink = `${process.env.APP_URL}/products/${order.product_id}`;
 
     // 4. Enviar o e-mail
+    console.log(`API Remind: Chamando a função sendPaymentReminderEmail para ${order.user_email}`);
     await sendPaymentReminderEmail({
       userEmail: order.user_email,
       userName: order.user_name,
       productName: order.product_name,
       reservedNumbers: reservedNumbers,
       paymentLink: paymentLink,
-      orderId: orderId,
+      orderId: order.id,
     });
+    console.log("API Remind: Função sendPaymentReminderEmail concluída com sucesso.");
 
-    return NextResponse.json({ message: 'E-mail de lembrete enviado com sucesso!'  });
+    return NextResponse.json({ message: 'E-mail de lembrete enviado com sucesso!' });
 
   } catch (error) {
-    console.error(`Erro ao enviar lembrete para pedido ${orderId}:`, error);
-    return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor.' }), 
+    console.error(`Erro ao enviar lembrete para o pedido ${orderId}:`, error);
+    return new NextResponse(JSON.stringify({ message: `Erro interno do servidor: ${error.message}` }), 
         { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
