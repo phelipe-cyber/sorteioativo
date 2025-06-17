@@ -109,7 +109,6 @@ export async function GET(request) {
   }
 }
 
-
 // --- NOVO MÉTODO POST PARA COMPLETAR UMA ORDEM ---
 export async function POST(request) {
     const authResult = await verifyAdminAuth(request);
