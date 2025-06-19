@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { dbPool } from '@/app/lib/db'; // Ajuste o caminho se necessário
 import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware'; // Ajuste o caminho se necessário
 import { sendWinnerNotificationEmail } from '@/app/lib/mailer'; // Importar a nova função de e-mail
+import { createWinnerNotification, sendWhatsAppNotification } from '@/app/lib/whatsapp'; 
 
 /**
  * @swagger
@@ -66,6 +67,7 @@ export async function POST(request, { params }) {
   const productId = params.id;
   let connection;
 
+
   console.log(`API Admin Draw: Iniciando sorteio para produto ID: ${productId}`);
 
   try {
@@ -75,7 +77,7 @@ export async function POST(request, { params }) {
 
     // 2. Verificar se o produto existe e está 'ativo'
     const [productRows] = await connection.execute(
-      "SELECT status, name, total_numbers FROM products WHERE id = ? FOR UPDATE", // Pega também o nome e o total de números
+      "SELECT status, name, total_numbers FROM products WHERE id = ? FOR UPDATE", 
       [productId]
     );
 
@@ -98,7 +100,7 @@ export async function POST(request, { params }) {
         [productId]
     );
     
-    const totalNumbersExpected = (product.total_numbers || 0) + 1; // +1 porque os números vão de 0 a total_numbers
+    const totalNumbersExpected = (product.total_numbers || 0) + 1;
 
     const soldCount = countRows[0].sold_count;
     if (soldCount < totalNumbersExpected) { 
@@ -115,9 +117,9 @@ export async function POST(request, { params }) {
     const winner = soldNumbers[Math.floor(Math.random() * soldNumbers.length)];
     console.log(`API Admin Draw: Vencedor sorteado para produto ID ${productId}: Número ${winner.number_value} (Utilizador ID: ${winner.user_id}, Pedido ID: ${winner.order_id})`);
 
-    // 5. Buscar os dados do ganhador para a notificação
+    // 5. Buscar os dados do ganhador para a notificação (incluindo o telefone)
     const [winnerDetailsRows] = await connection.execute(
-        "SELECT name, email FROM users WHERE id = ?",
+        "SELECT name, email, phone FROM users WHERE id = ?",
         [winner.user_id]
     );
     if (winnerDetailsRows.length === 0) {
@@ -134,7 +136,7 @@ export async function POST(request, { params }) {
       [winner.number_value, winner.user_id, productId]
     );
     
-    // 7. Inserir a notificação para o ganhador na tabela 'notifications'
+    // 7. Inserir a notificação na plataforma para o ganhador
     const notificationMessage = `Parabéns! Você ganhou o sorteio do produto "${product.name}" com o número ${String(winner.number_value).padStart(2,'0')}.`;
     await connection.execute(
         "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)",
@@ -144,37 +146,56 @@ export async function POST(request, { params }) {
     
     await connection.commit();
     console.log(`API Admin Draw: Transação commitada para produto ID: ${productId}`);
-
-     // --- ALTERAÇÃO AQUI: Passar o order_id para a função de e-mail ---
-    // 8. Enviar o e-mail de notificação (após a transação ser confirmada)
+    
+    const winnerLink = `${process.env.APP_URL}/my-numbers/`;
+    
+    // 8. Enviar as notificações (após a transação ser confirmada)
+    // Enviar e-mail
     try {
-      await sendWinnerNotificationEmail({
-          winnerEmail: winnerDetails.email,
-          winnerName: winnerDetails.name,
-          productName: product.name,
-          winningNumber: winner.number_value,
-          orderId: winner.order_id // Passando o ID do pedido
-      });
-  } catch (emailError) {
-      console.error(`API Admin Draw: O sorteio foi um sucesso, mas o envio de e-mail para ${winnerDetails.email} falhou:`, emailError);
+        await sendWinnerNotificationEmail({
+            winnerEmail: winnerDetails.email,
+            winnerName: winnerDetails.name,
+            productName: product.name,
+            winningNumber: winner.number_value,
+            orderId: winner.order_id,
+            winnerLink: winnerLink
+        });
+    } catch (emailError) {
+        console.error(`API Admin Draw: Falha ao enviar e-mail para ${winnerDetails.email}:`, emailError);
+    }
+    // Enviar WhatsApp
+    if (winnerDetails.phone) {
+        try {
+            const { message } = createWinnerNotification(
+                winnerDetails.name,
+                product.name,
+                winner.order_id,
+                winner.number_value,
+                winnerLink
+            );
+            await sendWhatsAppNotification(winnerDetails.phone, message);
+        } catch (whatsappError) {
+            console.error(`API Admin Draw: Falha ao enviar WhatsApp para ${winnerDetails.phone}:`, whatsappError);
+        }
+    } else {
+        console.warn(`API Admin Draw: Ganhador ${winnerDetails.name} não possui número de telefone para notificação via WhatsApp.`);
+    }
+
+    return NextResponse.json({
+      message: 'Sorteio realizado! O ganhador foi notificado por e-mail e na plataforma.',
+      winningNumber: winner.number_value,
+      winningUserId: winner.user_id,
+      winnerName: winnerDetails.name
+    }, { status: 200 });
+
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error(`API Admin Draw: Erro CRÍTICO ao realizar sorteio para produto ID ${productId}:`, error);
+    return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao realizar sorteio' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+    });
+  } finally {
+    if (connection) connection.release();
   }
-
-  return NextResponse.json({
-    message: 'Sorteio realizado! O ganhador foi notificado por e-mail e na plataforma.',
-    winningNumber: winner.number_value,
-    winningUserId: winner.user_id,
-    winnerName: winnerDetails.name,
-    orderId: winner.order_id
-  }, { status: 200 });
-
-} catch (error) {
-  if (connection) await connection.rollback();
-  console.error(`API Admin Draw: Erro CRÍTICO ao realizar sorteio para produto ID ${productId}:`, error);
-  return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao realizar sorteio' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-  });
-} finally {
-  if (connection) connection.release();
-}
 }

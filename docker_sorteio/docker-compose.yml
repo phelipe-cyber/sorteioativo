@@ -48,6 +48,8 @@ services:
     depends_on:
       db:
         condition: service_healthy # Garante que o app só inicie depois que o banco de dados estiver pronto
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   # Define o volume nomeado para persistir os dados do MySQL

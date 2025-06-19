@@ -9,6 +9,15 @@ import WhatsAppButton from '@/components/WhatsAppButton'; // <-- Importar o novo
 export const metadata: Metadata = {
   title: "Site de Sorteios",
   description: "Participe dos nossos sorteios e ganhe prêmios incríveis!",
+  icons: {
+    icon: '/sorteioativo_logo.svg', // Caminho para o seu ícone principal
+    shortcut: '/sorteioativo_logo.svg', // Ícone para a barra de endereços do navegador
+    apple: '/sorteioativo_logo.svg', // Ícone para dispositivos Apple
+    other: {
+      rel: 'apple-touch-icon-precomposed',
+      url: '/sorteioativo_logo.svg',
+    }
+  }
 };
 
 export default function RootLayout({
