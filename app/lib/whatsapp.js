@@ -43,6 +43,19 @@
       return { message, link: paymentRetryLink };
   };
   
+/**
+ * --- NOVA FUNÇÃO ---
+ * Gera a mensagem de notificação de pedido cancelado por inatividade.
+ * @param {string} userName - O nome do utilizador.
+ * @param {string} productName - O nome do produto.
+ * @param {number} orderId - O ID do pedido.
+ */
+export const createCancellationNotification = (userName, productName, orderId) => {
+  const message = `Olá, ${userName}. ℹ️\n\nO seu pedido #${orderId} para o sorteio *${productName}* foi cancelado por falta de pagamento.\n\nOs números que estavam reservados foram libertados e já estão disponíveis para outros participantes.\n\nSe ainda tiver interesse, pode aceder à página do sorteio e fazer uma nova seleção.`;
+  const buttons = [{ body: 'Ver Sorteio' }];
+  return { message, buttons };
+};
+
   // --- FUNÇÃO ATUALIZADA COM MELHOR LOG DE ERRO E URL CORRETA ---
   export const sendWhatsAppNotification = async (phone, message) => {
       try {

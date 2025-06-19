@@ -5,21 +5,9 @@ import { Payment } from 'mercadopago'; // Ajuste o caminho se necessário
 import { dbPool } from '@/app/lib/db'; // Ajuste o caminho se necessário
 import crypto from 'crypto';
 import { createSuccessNotification, createFailureNotification, createReminderNotification, sendWhatsAppNotification } from '@/app/lib/whatsapp'; // Importar utilitários
+import { logToDatabase } from '@/app/lib/system-logging';
 
 const WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET;
-// --- FUNÇÃO DE LOGGING ATUALIZADA para aceitar uma conexão existente ---
-const logToDatabase = async (connection, level, context, message, payload = null, userId = null, orderId = null) => {
-  const conn = connection || dbPool; // Usa a conexão fornecida ou uma nova do pool
-  try {
-    const query = "INSERT INTO system_logs (level, context, message, payload, user_id, order_id) VALUES (?, ?, ?, ?, ?, ?)";
-    const values = [level, context, message, payload ? JSON.stringify(payload) : null, userId, orderId];
-    await conn.execute(query, values);
-  } catch (dbError) {
-    console.error("FALHA CRÍTICA AO LOGAR NO BANCO DE DADOS:", dbError);
-    console.error("Log Original:", { level, context, message, payload, userId, orderId });
-  }
-};
-
 
 // Função verifySignature (como estava antes, com os logs)
 const verifySignature = (request, rawBody) => {
