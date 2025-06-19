@@ -58,7 +58,7 @@ export async function POST(request) {
         FROM orders o
         JOIN users u ON o.user_id = u.id
         JOIN products p ON o.product_id = p.id
-        WHERE o.status = 'pending' AND o.created_at < NOW() - INTERVAL 1 HOUR;
+        WHERE o.status = 'pending' AND o.created_at < NOW() - INTERVAL 48 HOUR;
       `);
   
       if (oldPendingOrders.length > 0) {
