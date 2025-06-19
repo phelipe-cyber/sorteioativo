@@ -203,9 +203,15 @@ export async function POST(request) {
       await logToDatabase(connection, 'INFO', 'webhook-numbers-released', `${releaseResult.affectedRows} números libertados.`, { orderId: internalOrderId }, userIdForLogging, orderIdForLogging);
     
     } else if (newOrderStatusInDb === 'pending') {
-      // Lógica para pendente (agora será acionada corretamente)
+      const [updateReservedResult] = await connection.execute(
+        "UPDATE raffle_numbers SET status = 'reserved', reserved_at = NOW() WHERE order_id = ? AND status = 'sold'",
+        [internalOrderId]
+      );
+      await logToDatabase(connection, 'INFO', 'webhook-sent-pending', `${updateReservedResult.affectedRows} números pendentes.`, { orderId: internalOrderId }, userIdForLogging, orderIdForLogging);
+      
       if (currentOrder.user_phone) {
           const paymentRetryLink = `${process.env.APP_URL}/my-numbers?filter=pending`;
+
           const [reservedNumbersRows] = await connection.execute(
               "SELECT number_value FROM raffle_numbers WHERE order_id = ? AND status = 'reserved'",
               [internalOrderId]
@@ -222,6 +228,12 @@ export async function POST(request) {
 
     if (newOrderStatusInDb === 'pending') {
       // Lógica para pendente (agora será acionada corretamente)
+      const [updateReservedResult] = await connection.execute(
+        "UPDATE raffle_numbers SET status = 'reserved', reserved_at = NOW() WHERE order_id = ? AND status = 'sold'",
+        [internalOrderId]
+      );
+      await logToDatabase(connection, 'INFO', 'webhook-sent-pending', `${updateReservedResult.affectedRows} números pendentes.`, { orderId: internalOrderId }, userIdForLogging, orderIdForLogging);
+      
       if (currentOrder.user_phone) {
           const paymentRetryLink = `${process.env.APP_URL}/my-numbers?filter=pending`;
           const [reservedNumbersRows] = await connection.execute(
