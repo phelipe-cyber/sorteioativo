@@ -1,6 +1,6 @@
 // lib/whatsapp.js
 
-const SUPPORT_PHONE_NUMBER = "5511964081280";
+// const SUPPORT_PHONE_NUMBER = "5511964081280";
 
 /**
  * Gera uma URL "Click-to-Chat" do WhatsApp.
@@ -29,7 +29,7 @@ const SUPPORT_PHONE_NUMBER = "5511964081280";
   /**
    * Gera a mensagem de notificação para o ganhador.
    */
-  export const createWinnerNotification = (userName, productName, orderId, winningNumber, winnerLink) => {
+  export const createWinnerNotification = (userName, productName, orderId, winningNumber) => {
     const message = `🎉 PARABÉNS, ${userName}! 🎉\n\nVocê é o grande ganhador(a) do sorteio *${productName}* (do seu Pedido #${orderId})!\n\nO seu número da sorte foi o *${String(winningNumber).padStart(2, '0')}*.\n\nEm breve entraremos em contato para combinar a entrega do seu prêmio! 🥳`;
     return { message };
     };
