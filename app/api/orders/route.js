@@ -165,29 +165,31 @@ export async function POST(request) {
     const selectedNumbersFromReservation = reservedNumbersRows.map(n => n.number_value);
     console.log(`API /api/orders: Números reservados encontrados para pedido ${internalOrderId}:`, selectedNumbersFromReservation);
 
-
+    if (currentOrder.status === 'pending'){ // Se o pedido está pendente mas não encontramos números reservados
+      // Isso pode indicar um problema na lógica de reserva ou que o webhook já liberou os números por falha no pagamento
+      // e esta chamada à /api/orders é tardia.
+      console.warn(`API /api/orders: Pedido ${internalOrderId} está pendente, mas não foram encontrados números reservados para ele. Verifique o fluxo de webhook e reserva.`);
+      // Não vamos impedir a finalização do pedido se o webhook já o atualizou para 'completed',
+      // mas se ele ainda estiver 'pending' e não acharmos números reservados, é um problema.
+      // O webhook é a fonte de verdade para a transição de 'reserved' para 'sold' ou 'available'.
+      // Esta API /api/orders atua mais como uma confirmação/finalização do lado do cliente.
+  }else{
     // 3. Marcar os números reservados como 'sold'
-    if (selectedNumbersFromReservation.length > 0) {
-        const placeholders = selectedNumbersFromReservation.map(() => '?').join(',');
-        const [updateNumbersResult] = await connection.execute(
-        `UPDATE raffle_numbers 
-         SET status = 'sold', reserved_at = NULL 
-         WHERE product_id = ? AND order_id = ? AND user_id = ? AND status = 'reserved' AND number_value IN (${placeholders})`,
-        [productId, internalOrderId, userId, ...selectedNumbersFromReservation]
-        );
-        console.log(`API /api/orders: ${updateNumbersResult.affectedRows} números marcados/confirmados como 'sold' para o pedido ${internalOrderId}.`);
-        if (updateNumbersResult.affectedRows !== selectedNumbersFromReservation.length) {
-            console.warn(`API /api/orders: Discrepância ao marcar números como 'sold'. Esperado: ${selectedNumbersFromReservation.length}, Atualizado: ${updateNumbersResult.affectedRows}. Isso pode ser ok se alguns já foram marcados.`);
-        }
-    } else if (currentOrder.status === 'pending'){ // Se o pedido está pendente mas não encontramos números reservados
-        // Isso pode indicar um problema na lógica de reserva ou que o webhook já liberou os números por falha no pagamento
-        // e esta chamada à /api/orders é tardia.
-        console.warn(`API /api/orders: Pedido ${internalOrderId} está pendente, mas não foram encontrados números reservados para ele. Verifique o fluxo de webhook e reserva.`);
-        // Não vamos impedir a finalização do pedido se o webhook já o atualizou para 'completed',
-        // mas se ele ainda estiver 'pending' e não acharmos números reservados, é um problema.
-        // O webhook é a fonte de verdade para a transição de 'reserved' para 'sold' ou 'available'.
-        // Esta API /api/orders atua mais como uma confirmação/finalização do lado do cliente.
-    }
+        if (selectedNumbersFromReservation.length > 0) {
+            const placeholders = selectedNumbersFromReservation.map(() => '?').join(',');
+            const [updateNumbersResult] = await connection.execute(
+            `UPDATE raffle_numbers 
+            SET status = 'sold', reserved_at = NULL 
+            WHERE product_id = ? AND order_id = ? AND user_id = ? AND status = 'reserved' AND number_value IN (${placeholders})`,
+            [productId, internalOrderId, userId, ...selectedNumbersFromReservation]
+            );
+            console.log(`API /api/orders: ${updateNumbersResult.affectedRows} números marcados/confirmados como 'sold' para o pedido ${internalOrderId}.`);
+            if (updateNumbersResult.affectedRows !== selectedNumbersFromReservation.length) {
+                console.warn(`API /api/orders: Discrepância ao marcar números como 'sold'. Esperado: ${selectedNumbersFromReservation.length}, Atualizado: ${updateNumbersResult.affectedRows}. Isso pode ser ok se alguns já foram marcados.`);
+            }
+        } 
+  }
+
 
 
     // 4. Atualizar o status do pedido para 'completed'

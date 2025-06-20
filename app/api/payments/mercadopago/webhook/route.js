@@ -148,7 +148,8 @@ export async function POST(request) {
       await connection.commit();
       return NextResponse.json({ message: 'Pedido já processado e completo.' });
     }
-
+    console.log('mpStatus',mpStatus)
+    
     let newOrderStatusInDb = currentOrderStatusInDb;
     if (mpStatus === 'approved') newOrderStatusInDb = 'completed';
     else if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(mpStatus)) newOrderStatusInDb = 'failed';
