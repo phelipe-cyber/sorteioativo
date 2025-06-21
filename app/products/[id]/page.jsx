@@ -1,7 +1,7 @@
 // app/products/[id]/page.jsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext'; 
 import Link from 'next/link';
@@ -46,6 +46,8 @@ export default function ProductDetailPage() {
   const router = useRouter();
   
   const [userFeedback, setUserFeedback] = useState('');
+  
+  const topOfPageRef = useRef(null);
 
   const fetchProductData = useCallback(async () => {
     if (!productId) return;
@@ -67,6 +69,7 @@ export default function ProductDetailPage() {
     } catch (error) {
       console.error("Erro ao carregar dados do produto:", error);
       setUserFeedback(`Erro ao carregar dados: ${error.message}`);
+      topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
@@ -155,6 +158,7 @@ export default function ProductDetailPage() {
   const handleInitiatePayment = () => {
     if (selectedNumbers.length === 0) { 
         setUserFeedback("Selecione pelo menos um número para continuar.");
+        topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
         return;
     }
     if (!product) { 
@@ -199,17 +203,34 @@ export default function ProductDetailPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || 'Falha ao iniciar o pagamento com Mercado Pago.');
-            }
-
-            if (data.init_point) {
-                window.location.href = data.init_point;
-            } else {
-                throw new Error('Link de pagamento do Mercado Pago não recebido.');
-            }
+              // Se a API retornar erro de números indisponíveis (status 409)
+              if (response.status === 409 && data.unavailable_numbers) {
+                  // --- LÓGICA CORRIGIDA ---
+                  // 1. Define a mensagem de feedback.
+                  setUserFeedback(`Os seguintes números não estão mais disponíveis: ${data.unavailable_numbers.join(', ')}. A sua seleção foi atualizada.`);
+                  // 2. Remove os números indisponíveis da seleção do utilizador.
+                  setSelectedNumbers(currentSelection => 
+                      currentSelection.filter(num => !data.unavailable_numbers.includes(num))
+                  );
+                  // 3. Rola a página para o topo para que a mensagem seja vista.
+                  topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  // 4. Recarrega os dados da grelha para mostrar os novos estados (vendido/reservado).
+                  // await fetchProductData();
+                  setTimeout(() => fetchProductData(), 4000);
+              } else {
+                  // Para outros erros, lança a exceção para ser apanhada pelo catch
+                  throw new Error(data.message || 'Falha ao iniciar o pagamento com Mercado Pago.');
+              }
+          } else if (data.init_point) {
+              window.location.href = data.init_point;
+          } else {
+              throw new Error('Link de pagamento do Mercado Pago não recebido.');
+          }
+              
         } catch (err) {
             console.error("Erro ao iniciar pagamento com MP:", err);
             setUserFeedback(err.message || "Erro ao contatar o Mercado Pago. Tente novamente.");
+            topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
         } finally {
             setActionLoading(false);
         }
@@ -232,7 +253,7 @@ export default function ProductDetailPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-8 pb-32 sm:pb-28"> {/* Aumentado padding bottom */}
+    <div  ref={topOfPageRef} className="container mx-auto px-4 py-8 pb-32 sm:pb-28"> {/* Aumentado padding bottom */}
         <div className="mb-8">
             <Link 
             href="/" 
@@ -242,12 +263,12 @@ export default function ProductDetailPage() {
             Voltar para todos os sorteios
             </Link>
         </div>
-        
+
         {userFeedback && (
              <div 
              className={`p-4 mb-6 text-sm rounded-lg shadow ${
-               userFeedback.toLowerCase().includes('erro') || userFeedback.toLowerCase().includes('não há')
-                 ? 'bg-red-50 text-red-700 border border-red-200' 
+               userFeedback.toLowerCase().includes('erro') || userFeedback.toLowerCase().includes('não estão mais disponíveis')
+                 ? 'bg-red-100 text-red-700 border border-red-200' 
                  : 'bg-blue-50 text-blue-700 border border-blue-200'
              }`} 
              role="alert"

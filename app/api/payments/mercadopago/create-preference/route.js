@@ -178,7 +178,7 @@ export async function POST(request) {
         failure: `${process.env.APP_URL_WEBHOOK}/payment/failure?order_id=${internalOrderId}`,
         pending: `${process.env.APP_URL_WEBHOOK}/payment/pending?order_id=${internalOrderId}`,
       },
-      // auto_return: 'approved',
+      auto_return: 'approved',
       notification_url: `${process.env.APP_URL_WEBHOOK}/api/payments/mercadopago/webhook?source_news=webhooks`,
       external_reference: String(internalOrderId),
     };
