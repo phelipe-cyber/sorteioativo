@@ -45,6 +45,12 @@ const IconNotifyWinner = () => (
   </svg>
 );
 
+const IconCheckSend = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m22 11.08-3.64-1.29a2.08 2.08 0 0 0-2.07 2.07L16 15.5a2.08 2.08 0 0 0 2.07 2.07L22 18.87"/><path d="M16 15.5a2.08 2.08 0 0 0-2.07-2.07L3 11.08v-1.5a2.08 2.08 0 0 1 2.07-2.07L16 8.87a2.08 2.08 0 0 1 2.07 2.07v1.5a2.08 2.08 0 0 1-2.07 2.07z"/><polyline points="22 11.08 12 7 2 11.08"/>
+  </svg>
+);
+
 const OrderDetailsModal = ({ order, onClose }) => {
   return (
       <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center p-4 z-50">
@@ -122,6 +128,23 @@ export default function AdminOrdersPage() {
     });
   }, [allOrders, filterStatus, filterUserId, filterOrderId, filterClientName]);
 
+  const handleNotifySuccess = async (orderId) => {
+    setActionLoadingId(orderId);
+    setActionMessage({ type: '', text: '' });
+    try {
+        const response = await fetch(`/api/admin/orders/${orderId}/notify-success`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Falha ao enviar notificação.');
+        setActionMessage({ type: 'success', text: `Notificação de sucesso para o pedido #${orderId} reenviada!` });
+    } catch(err) {
+        setActionMessage({ type: 'error', text: `Erro ao notificar sucesso para o pedido #${orderId}: ${err.message}` });
+    } finally {
+        setActionLoadingId(null);
+    }
+  };
 
   const handleSendReminder = async (orderId) => {
     setActionLoadingId(orderId);
@@ -266,8 +289,9 @@ export default function AdminOrdersPage() {
                           <p><strong>Email:</strong> {order.user_email || 'N/A'}</p>
                           <p><strong>Total:</strong> {parseFloat(order.total_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                           <p><strong>Data:</strong> {new Date(order.created_at).toLocaleString('pt-BR')}</p>
+                          <p><strong>Phone:</strong> {order.user_phone}</p>
                       </div>
-
+                      
                       {isWinningOrder && (
                         <div className="p-3 bg-yellow-100 border border-yellow-200 rounded-md mb-4 text-center">
                             <p className="font-bold text-yellow-800 flex items-center justify-center gap-2"><IconTrophy className="text-yellow-500" /> GANHADOR!</p>
@@ -292,29 +316,29 @@ export default function AdminOrdersPage() {
                           </div>
                       )}
                   </div>
-                  <div className="flex items-center gap-2 mt-4 border-t pt-3">
-                    <Link href={`/admin/orders/edit/${order.id}`} className="flex-1 text-center text-indigo-600 hover:text-indigo-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-indigo-50 transition-colors text-sm font-medium">
+                  <div className="flex items-center flex-wrap gap-2 mt-4 border-t pt-3">
+                    <Link href={`/admin/orders/edit/${order.id}`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-indigo-50 transition-colors text-sm font-medium">
                       <IconEdit /><span>Editar</span>
                     </Link>
-                    <button onClick={() => setViewingOrder(order)} className="flex-1 text-center text-gray-600 hover:text-gray-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-gray-100 transition-colors text-sm font-medium">
+                    <button onClick={() => setViewingOrder(order)} className="text-gray-600 hover:text-gray-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-gray-100 transition-colors text-sm font-medium">
                         <IconDetails /><span>Detalhes</span>
                     </button>
                     {order.status === 'pending' && (
-                      <button onClick={() => handleSendReminder(order.id)} disabled={actionLoadingId === order.id} className="flex-1 text-center text-yellow-600 hover:text-yellow-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-yellow-50 transition-colors disabled:opacity-50 disabled:cursor-wait text-sm font-medium" title="Enviar lembrete de pagamento">
+                      <button onClick={() => handleSendReminder(order.id)} disabled={actionLoadingId === order.id} className="text-yellow-600 hover:text-yellow-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-yellow-50 transition-colors disabled:opacity-50 disabled:cursor-wait text-sm font-medium" title="Enviar lembrete de pagamento">
                         {actionLoadingId === order.id ? <Spinner size="h-4 w-4" color="border-yellow-600" /> : <IconReminder />}
                         <span>Lembrar</span>
                       </button>
                     )}
-                    {/* --- BOTÃO PARA NOTIFICAR GANHADOR --- */}
+                    {order.status === 'completed' && !isWinningOrder && (
+                        <button onClick={() => handleNotifySuccess(order.id)} disabled={actionLoadingId === order.id} className="text-green-600 hover:text-green-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-wait text-sm font-medium" title="Reenviar Notificação de Pagamento Aprovado">
+                            {actionLoadingId === order.id ? <Spinner size="h-4 w-4" color="border-green-600" /> : <IconCheckSend />}
+                            <span>Notificar Pgto APRO</span>
+                        </button>
+                    )}
                     {isWinningOrder && (
-                        <button
-                            onClick={() => handleNotifyWinner(order.id)}
-                            disabled={actionLoadingId === order.id}
-                            className="flex-1 text-center text-green-600 hover:text-green-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-wait text-sm font-medium"
-                            title="Reenviar Notificação de Ganhador"
-                        >
+                        <button onClick={() => handleNotifyWinner(order.id)} disabled={actionLoadingId === order.id} className="text-green-600 hover:text-green-900 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-md hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-wait text-sm font-medium" title="Reenviar Notificação de Ganhador">
                             {actionLoadingId === order.id ? <Spinner size="h-4 w-4" color="border-green-600" /> : <IconTrophy />}
-                            <span>Notificar</span>
+                            <span>Notificar Ganhador</span>
                         </button>
                     )}
                   </div>

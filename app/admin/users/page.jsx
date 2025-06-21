@@ -177,7 +177,8 @@ return (
                           <h3 className="font-semibold text-gray-800 truncate" title={userItem.name}>
                               {userItem.name}
                           </h3>
-                          <p className="text-sm text-gray-500 truncate" title={userItem.email}>{userItem.email}</p>
+                          <p className="text-sm text-gray-500 truncate" title={userItem.email}>{userItem.email} </p>
+                          <p className="text-sm text-gray-500 truncate" title={userItem.phone}>Phone: {userItem.phone}</p>
                       </div>
                       <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${userItem.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                           {userItem.role}
