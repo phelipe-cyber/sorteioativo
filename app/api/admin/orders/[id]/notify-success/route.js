@@ -37,7 +37,6 @@ export async function POST(request, { params }) {
   }
 
   const orderId = params.id;
-  let connection; // Declare connection here
   try {
     // 1. Obter todos os detalhes necessários
     const [order] = await query({
