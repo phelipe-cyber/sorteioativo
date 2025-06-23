@@ -162,7 +162,7 @@ if (loading) {
   return (
     <div className="flex justify-center items-center h-full py-10">
       <Spinner size="h-10 w-10" />
-      <p className="ml-3 text-lg">A carregar produtos...</p>
+      <p className="ml-3 text-lg">Carrengando produtos...</p>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 // context/AuthContext.js
 'use client';
 
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext, useCallback } from 'react'; // Adicionado useCallback
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext();
@@ -15,102 +15,92 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    console.log('AuthContext: Carregando do localStorage...'); // DEBUG
     if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        console.log('AuthContext: Usuário do localStorage:', parsedUser); // DEBUG
-        setToken(storedToken);
-        setUser(parsedUser);
-      } catch (e) {
-        console.error('AuthContext: Erro ao parsear usuário do localStorage', e);
-        localStorage.removeItem('user'); // Limpa usuário inválido
-        localStorage.removeItem('token');
-      }
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
     }
     setLoading(false);
   }, []);
 
-  // const login = async (email, password) => {
-  //   // ... (função login que já existe, sem alterações)
-  //   const response = await fetch('/api/users/login', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({ email, password }),
-  //   });
-  //   const data = await response.json();
-  //   if (response.ok) {
-  //     localStorage.setItem('token', data.token);
-  //     localStorage.setItem('user', JSON.stringify(data.user));
-  //     setToken(data.token);
-  //     setUser(data.user);
-  //     router.push('/');
-  //     return data; // Retorna a mensagem de sucesso
-  //   } else {
-  //     throw new Error(data.message || 'Falha no login');
-  //   }
-  // };
+  const logout = useCallback(() => { // Envolvido em useCallback
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+    router.push('/login');
+  }, [router]);
+
+  // --- NOVA FUNÇÃO authFetch ---
+  // Este é um "wrapper" para a função fetch que adiciona o token
+  // e trata automaticamente os erros 401 (token expirado/inválido).
+  const authFetch = useCallback(async (url, options = {}) => {
+    if (!token) {
+        logout(); // Se não há token, desloga
+        throw new Error('Utilizador não autenticado.');
+    }
+
+    // Adiciona o cabeçalho de autorização
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+
+    const finalOptions = {
+        ...options,
+        headers: {
+            ...defaultHeaders,
+            ...options.headers,
+        },
+    };
+
+    const response = await fetch(url, finalOptions);
+
+    // Se a resposta for 401 Unauthorized, o token expirou ou é inválido.
+    if (response.status === 401) {
+        console.log("AuthContext: Token expirado ou inválido. A deslogar utilizador.");
+        logout();
+        // Lança um erro para interromper a execução do código que fez a chamada
+        throw new Error('Sessão expirada. Por favor, faça login novamente.');
+    }
+
+    return response;
+  }, [token, logout]);
 
   const login = async (email, password) => {
-    const response = await fetch('/api/users/login', { 
+    const response = await fetch('/api/users/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
-     });
-    
+    });
     const data = await response.json();
     if (response.ok) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setToken(data.token);
       setUser(data.user);
-      router.push('/');
-      console.log('AuthContext: Login bem-sucedido, usuário definido:', data.user); // DEBUG
-      // A lógica de redirecionamento após o login está na página de login
-      return data; // Retorna a mensagem de sucesso
     } else {
       throw new Error(data.message || 'Falha no login');
     }
   };
-
-  // --- ADICIONE ESTA NOVA FUNÇÃO ---
+  
   const register = async (name, email, password, phone) => {
     const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password ,phone }),
+        body: JSON.stringify({ name, email, password, phone }),
     });
-
     const data = await response.json();
-
     if (!response.ok) {
-        // Se a API retornar um erro (ex: email já existe), ele será lançado aqui
-        throw new Error(data.message || 'Falha ao registrar.');
+        throw new Error(data.message || 'Falha ao registar.');
     }
-
-    return data; // Retorna a mensagem de sucesso
+    return data;
   };
-  // --- FIM DA NOVA FUNÇÃO ---
   
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    router.push('/login');
-  };
-
-  // Adicione um log para quando o valor do contexto muda
-  console.log('AuthContext Value:', { user, token, loading, isAuthenticated: !!token }); // DEBUG
-
-
-  // Adicione a função `register` ao objeto `value`
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, loading, isAuthenticated: !!token, authFetch }}>
       {children}
     </AuthContext.Provider>
   );
-  
 }
 
 export const useAuth = () => useContext(AuthContext);

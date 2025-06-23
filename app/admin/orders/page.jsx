@@ -79,7 +79,18 @@ const OrderDetailsModal = ({ order, onClose }) => {
 };
 
 export default function AdminOrdersPage() {
-  const { token } = useAuth();
+  
+  const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
+  const router = useRouter();
+  
+  useEffect(() => {
+    if (!authLoading) { 
+      if (!isAuthenticated || user?.role !== 'admin') {
+        router.push('/login');
+      }
+    }
+  }, [user, authLoading, isAuthenticated, router]);
+
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -201,7 +212,7 @@ export default function AdminOrdersPage() {
 
 
   if (loading) {
-    return ( <div className="flex justify-center items-center h-full py-10"><Spinner size="h-10 w-10" /><p className="ml-3">A carregar pedidos...</p></div> );
+    return ( <div className="flex justify-center items-center h-full py-10"><Spinner size="h-10 w-10" /><p className="ml-3">Carregando pedidos...</p></div> );
   }
 
   if (error) {

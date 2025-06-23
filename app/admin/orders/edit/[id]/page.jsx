@@ -105,7 +105,7 @@ export default function AdminEditOrderPage() {
 
   if (error && !order) { 
     return (
-        <div className="w-full flex flex-col items-center justify-start pt-8 md:pt-12">
+        <div className="w-full flex flex-col items-center justify-start pt-8 md:pt-2">
             <div className="bg-white p-6 sm:p-10 rounded-xl shadow-2xl max-w-2xl w-full">
                  <div className="mb-6">
                     <Link href="/admin/orders" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium group">
@@ -119,7 +119,7 @@ export default function AdminEditOrderPage() {
   }
 
   return (
-    <div className="w-full flex flex-col items-center justify-start pt-8 md:pt-12"> 
+    <div className="w-full flex flex-col items-center justify-start pt-8 md:pt-2"> 
       <div className="bg-white p-6 sm:p-10 rounded-xl shadow-2xl max-w-3xl w-full">
         <div className="mb-6">
           <Link href="/admin/orders" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium group">

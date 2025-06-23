@@ -30,7 +30,7 @@ export default function RootLayout({
       <body className="h-full flex flex-col">
         <AuthProvider>
           <Header />
-          <main className="flex-grow container mx-auto p-4 w-full">
+          <main className="flex-grow container mx-auto p-2 w-full">
             {children}
           </main>
           <WhatsAppButton />
