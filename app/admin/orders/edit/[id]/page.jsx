@@ -136,7 +136,7 @@ export default function AdminEditOrderPage() {
         <div className="mb-8 p-4 border rounded-lg bg-gray-50 space-y-2 text-sm">
             <p><strong>Cliente:</strong> {order.user_name} ({order.user_email})</p>
             <p><strong>Produto:</strong> {order.product_name} (ID: {order.product_id})</p>
-            <p><strong>Valor Total:</strong> {parseFloat(order.total_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+            <p><strong>Valor Total:</strong> {parseFloat(order.final_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
             <p><strong>Data do Pedido:</strong> {new Date(order.created_at).toLocaleString('pt-BR')}</p>
         </div>
 

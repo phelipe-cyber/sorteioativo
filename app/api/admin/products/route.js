@@ -116,9 +116,7 @@ export async function GET(request) {
       // --- CORREÇÃO AQUI: Adicionado LEFT JOIN para buscar o nome do ganhador ---
       query: `
         SELECT 
-            p.id, p.name, p.description, p.price_per_number, p.image_url, 
-            p.status, p.created_at, p.winning_number, p.winner_user_id, 
-            p.total_numbers,
+            p.*,
             u.name as winner_name 
         FROM products p
         LEFT JOIN users u ON p.winner_user_id = u.id
@@ -138,6 +136,8 @@ export async function GET(request) {
   }
 }
 
+
+// POST: Cria um novo produto
 export async function POST(request) {
   const authResult = await verifyAdminAuth(request);
   if (!authResult.isAuthenticated) {
@@ -146,44 +146,40 @@ export async function POST(request) {
 
   let connection;
   try {
-    // --- RECEBER O NOVO CAMPO total_numbers ---
-    const { name, description, price_per_number, image_url, total_numbers } = await request.json();
+    const { name, description, price_per_number, image_url, total_numbers, discount_quantity, discount_percentage } = await request.json();
 
-    // --- VALIDAÇÃO DOS DADOS ---
+    // Validações
     if (!name || price_per_number === undefined || total_numbers === undefined) {
-      return NextResponse.json({ message: 'Nome, preço por número e último número são obrigatórios.' }, { status: 400 });
+      return new NextResponse(JSON.stringify({ message: 'Nome, preço e último número são obrigatórios.' }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     const lastNumber = parseInt(total_numbers, 10);
-    if (isNaN(lastNumber) || lastNumber < 1 || lastNumber > 10000) { // Adiciona um limite razoável
-        return NextResponse.json({ message: 'O último número deve ser um valor numérico entre 1 e 10.000.' }, { status: 400 });
+    if (isNaN(lastNumber) || lastNumber < 1) {
+        return new NextResponse(JSON.stringify({ message: 'O último número deve ser um valor numérico válido e maior que zero.' }), 
+          { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     connection = await dbPool.getConnection();
     await connection.beginTransaction();
 
-    // Inserir o novo produto com total_numbers
-    // Certifique-se de que a coluna 'total_numbers' exista na sua tabela 'products'
+    // --- CORREÇÃO NA QUERY INSERT ---
+    // A query agora tem o número correto de colunas (sem slug) e de placeholders.
+    // O valor 'upcoming' para o status é passado no array de valores.
     const [productResult] = await connection.execute(
-      "INSERT INTO products (name, description, price_per_number, image_url, status, total_numbers) VALUES (?, ?, ?, ?, 'upcoming', ?)",
-      [name, description, price_per_number, image_url, lastNumber]
+      "INSERT INTO products (name, description, price_per_number, image_url, status, total_numbers, discount_quantity, discount_percentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [name, description, parseFloat(price_per_number), image_url, 'upcoming', lastNumber, parseInt(discount_quantity) || null, parseInt(discount_percentage) || null]
     );
     const newProductId = productResult.insertId;
-    console.log(`API Admin Create Product: Produto ID ${newProductId} criado.`);
+    console.log(`API Admin Create Product: Produto ID ${newProductId} criado com sucesso.`);
 
-    // --- USAR lastNumber PARA GERAR OS NÚMEROS ---
+    // Inserir os números do sorteio
     const numbersToInsert = [];
-    for (let i = 0; i <= lastNumber; i++) { // O loop agora vai de 0 até o número fornecido
+    for (let i = 0; i <= lastNumber; i++) {
       numbersToInsert.push([newProductId, i]);
     }
-    
-    // Inserção em lote na tabela raffle_numbers
     if (numbersToInsert.length > 0) {
-        await connection.query(
-          "INSERT INTO raffle_numbers (product_id, number_value) VALUES ?",
-          [numbersToInsert]
-        );
-        console.log(`API Admin Create Product: ${numbersToInsert.length} números inseridos para o produto ID ${newProductId}.`);
+        await connection.query("INSERT INTO raffle_numbers (product_id, number_value) VALUES ?", [numbersToInsert]);
     }
 
     await connection.commit();
@@ -196,7 +192,8 @@ export async function POST(request) {
   } catch (error) {
     if (connection) await connection.rollback();
     console.error("Erro ao criar produto (Admin POST):", error);
-    return NextResponse.json({ message: 'Erro interno do servidor ao criar produto.' }, { status: 500 });
+    return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao criar produto.' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } });
   } finally {
     if (connection) connection.release();
   }

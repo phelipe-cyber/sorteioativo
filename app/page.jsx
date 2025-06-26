@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Spinner from '@/components/Spinner'; // Ajustado para o alias @
+import Spinner from '../components/Spinner'; 
 
 // Ícone para o selo PIX
 const PixIcon = ({ className = "w-4 h-4" }) => (
@@ -13,20 +13,19 @@ const PixIcon = ({ className = "w-4 h-4" }) => (
 );
 
 
-// --- NOVO COMPONENTE PRODUCTCARD ---
 function ProductCard({ product, isLoading, onClick }) {
   return (
     <div 
       onClick={onClick} 
-      className="bg-white rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-50 cursor-pointer relative group flex flex-col"
+      className="block bg-white rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-50 cursor-pointer relative group flex flex-col"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
     >
-      <div className={`transition-opacity duration-300 flex-grow ${isLoading ? 'opacity-20' : ''}`}>
+      <div className={`transition-opacity duration-300 flex-grow flex flex-col ${isLoading ? 'opacity-20' : ''}`}>
         {/* --- CONTAINER DA IMAGEM --- */}
-        <div className="w-full h-auto">
-          <img 
+        <div className="w-full h-48 bg-gray-200"> 
+          <img
             src={product.image_url || `https://placehold.co/400x300/E2E8F0/4A5568?text=Imagem`}
             alt={product.name}
             className="w-full h-full object-cover" // object-cover garante que a imagem preencha o container, cortando o excesso
@@ -35,13 +34,13 @@ function ProductCard({ product, isLoading, onClick }) {
 
         {/* --- CONTEÚDO DE TEXTO --- */}
         <div className="p-5 flex-grow flex flex-col">
-          <h3 className="text-base sm:text-lg font-bold text-gray-800 leading-tight group-hover:text-indigo-600 transition-colors flex-grow">
+          <h3 className="text-base sm:text-lg font-bold text-gray-800 leading-tight group-hover:text-indigo-600 transition-colors">
             {product.name}
           </h3>
           
           {product.description && (
-              <p className="text-gray-500 text-xs sm:text-sm mt-1">
-                  {product.description.substring(0, 50)}{product.description.length > 50 ? '...' : ''}
+              <p className="text-gray-500 text-xs sm:text-sm mt-1 flex-grow">
+                  {product.description.substring(0, 80)}{product.description.length > 80 ? '...' : ''}
               </p>
           )}
 
@@ -55,7 +54,7 @@ function ProductCard({ product, isLoading, onClick }) {
             </div>
           )}
           
-          <p className="text-base font-semibold text-green-600 mt-3">
+          <p className="text-base font-semibold text-green-600 mt-4">
             {parseFloat(product.price_per_number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} por número
           </p>
         </div>
@@ -64,7 +63,7 @@ function ProductCard({ product, isLoading, onClick }) {
       {/* --- BOTÃO NA PARTE INFERIOR DO CARD --- */}
       <div className={`bg-gray-50 px-5 py-3 transition-opacity duration-300 ${isLoading ? 'opacity-20' : ''}`}>
            <div className="block w-full text-center bg-indigo-600 text-white font-bold py-2.5 px-3 rounded-lg group-hover:bg-indigo-700 transition-colors text-sm">
-            Ver Números disponíveis
+            Ver Sorteio
           </div>
       </div>
 

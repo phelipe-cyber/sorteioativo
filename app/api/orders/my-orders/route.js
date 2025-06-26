@@ -34,7 +34,7 @@ import { verifyAuth } from '@/app/lib/authMiddleware'; // Ajuste o caminho se ne
  *                       order_date:
  *                         type: string
  *                         format: date-time
- *                       total_amount:
+ *                       final_total:
  *                         type: number
  *                         format: float
  *                       status:
@@ -78,7 +78,7 @@ export async function GET(request) {
           o.id as order_id, 
           o.product_id, 
           o.created_at as order_date, 
-          o.total_amount,
+          o.final_total,
           o.status as order_status  -- <<< ADICIONADO O STATUS DO PEDIDO AQUI
         FROM orders o
         WHERE o.user_id = ? 
@@ -130,7 +130,7 @@ export async function GET(request) {
           order_id: order.order_id,
           product_id: order.product_id,
           order_date: order.order_date,
-          total_amount: order.total_amount,
+          final_total: order.final_total,
           status: order.order_status, // Usando o alias order_status
           product: {
             name: productDetails.name,

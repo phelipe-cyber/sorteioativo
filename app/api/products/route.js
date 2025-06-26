@@ -54,7 +54,7 @@ export async function GET() {
   try {
     const products = await query({
       // --- CORREÇÃO AQUI: Adicionado 'prize_type' à consulta SQL ---
-      query: "SELECT id, name, description, price_per_number, image_url, status, prize_type FROM products WHERE status = 'active'",
+      query: "SELECT * FROM products WHERE status = 'active'",
       values: [],
     });
 

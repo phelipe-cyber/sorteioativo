@@ -17,7 +17,8 @@ const IconArrowLeft = () => (
 export default function AdminCreateProductPage() {
   const { token, user, isAuthenticated, loading: authLoading } = useAuth(); 
   const router = useRouter();
-
+  const [discountQuantity, setDiscountQuantity] = useState('');
+  const [discountPercentage, setDiscountPercentage] = useState('');
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [pricePerNumber, setPricePerNumber] = useState('');
@@ -83,7 +84,9 @@ export default function AdminCreateProductPage() {
           description: description,
           price_per_number: parseFloat(pricePerNumber),
           image_url: imageUrl,
-          total_numbers: numTotalNumbers, 
+          total_numbers: numTotalNumbers,
+          discount_quantity: parseInt(discountQuantity) || null, // Envia null se vazio
+          discount_percentage: parseInt(discountPercentage) || null, // Envia null se vazio
         }),
       });
 
@@ -99,7 +102,9 @@ export default function AdminCreateProductPage() {
       setDescription('');
       setPricePerNumber('');
       setImageUrl('');
-      setTotalNumbers('100'); // Reset para o padrão
+      setTotalNumbers(''); // Reset para o padrão
+      setDiscountPercentage('');
+      setDiscountQuantity('');
 
     } catch (err) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
@@ -139,6 +144,28 @@ export default function AdminCreateProductPage() {
             />
           </div>
 
+          <div className="p-4 border rounded-lg bg-gray-50">
+            <h3 className="text-md font-medium text-gray-700 mb-2">Configuração de Desconto (Opcional)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <label htmlFor="discountQuantity" className="block text-sm font-medium text-gray-700 mb-1.5">Nº Mínimo para Desconto</label>
+                    <input
+                    type="number" id="discountQuantity" value={discountQuantity} onChange={(e) => setDiscountQuantity(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    disabled={isLoading} placeholder="Ex: 5"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="discountPercentage" className="block text-sm font-medium text-gray-700 mb-1.5">Percentagem de Desconto (%)</label>
+                    <input
+                    type="number" id="discountPercentage" value={discountPercentage} onChange={(e) => setDiscountPercentage(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    disabled={isLoading} placeholder="Ex: 10"
+                    />
+                </div>
+            </div>
+          </div>
+          
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
             <textarea

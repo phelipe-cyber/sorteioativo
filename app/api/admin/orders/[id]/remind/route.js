@@ -99,7 +99,7 @@ export async function POST(request, { params }) {
     console.log(`API Remind: Números reservados encontrados: ${reservedNumbers.join(', ')}`);
 
     // Montar o link de pagamento
-    const paymentLink = `${process.env.APP_URL}/products/${order.product_id}`;
+    const paymentLink = `${process.env.APP_URL}/my-numbers?filter=pending`;
 
       // 2. Enviar o e-mail
       await sendPaymentReminderEmail({

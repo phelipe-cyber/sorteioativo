@@ -31,7 +31,7 @@ CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     product_id INT NOT NULL,
-    total_amount DECIMAL(10, 2) NOT NULL,
+    final_total DECIMAL(10, 2) NOT NULL,
     prize_choice ENUM('pix', 'product') NULL DEFAULT NULL,
     status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
     payment_details TEXT,
@@ -103,3 +103,17 @@ CREATE TABLE `system_logs` (
     ON DELETE SET NULL
     ON UPDATE NO ACTION
 );
+
+ALTER TABLE `orders`
+CHANGE COLUMN `total_amount` `final_total` DECIMAL(10,2) NULL DEFAULT NULL,
+ADD COLUMN `subtotal` DECIMAL(10,2) NULL DEFAULT NULL AFTER `prize_choice`,
+ADD COLUMN `discount_amount` DECIMAL(10,2) NULL DEFAULT NULL AFTER `subtotal`;
+
+-- Adiciona colunas para a quantidade mínima e a percentagem do desconto.
+ALTER TABLE `products` 
+ADD COLUMN `discount_quantity` INT NULL DEFAULT NULL AFTER `prize_type`,
+ADD COLUMN `discount_percentage` INT NULL DEFAULT NULL AFTER `discount_quantity`;
+
+-- Adiciona um comentário para explicar as colunas
+ALTER TABLE `products` 
+COMMENT = 'discount_quantity: quantidade mínima de números para aplicar o desconto. discount_percentage: o valor da percentagem do desconto (ex: 10 para 10%).';

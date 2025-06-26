@@ -60,7 +60,7 @@ export async function GET(request) {
     const orders = await query({
       query: `
         SELECT 
-            o.id, o.user_id, o.total_amount, o.status, o.prize_choice, o.created_at,
+            o.id, o.user_id, o.final_total, o.status, o.prize_choice, o.created_at,
             u.name as user_name, u.email as user_email, u.phone as user_phone,
             p.id as product_id, p.name as product_name,
             p.status as product_status, p.winning_number, p.winner_user_id

@@ -63,7 +63,7 @@ const OrderDetailsModal = ({ order, onClose }) => {
                   <p><strong>Status do Pedido:</strong> <span className="font-medium text-indigo-600">{order.status}</span></p>
                   <p><strong>Cliente:</strong> {order.user_name} ({order.user_email})</p>
                   <p><strong>Produto:</strong> {order.product_name}</p>
-                  <p><strong>Valor Total:</strong> {parseFloat(order.total_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                  <p><strong>Valor Total:</strong> {parseFloat(order.final_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                   <p><strong>Data:</strong> {new Date(order.created_at).toLocaleString('pt-BR')}</p>
                   
                   <div className="pt-2">
@@ -298,7 +298,7 @@ export default function AdminOrdersPage() {
                       <div className="text-sm text-gray-600 space-y-1 mb-4 border-t pt-3">
                           <p><strong>Cliente:</strong> <span className={`${isWinningOrder ? 'text-green-700 font-bold' : ''}`}>{order.user_name || 'N/A'}</span></p>
                           <p><strong>Email:</strong> {order.user_email || 'N/A'}</p>
-                          <p><strong>Total:</strong> {parseFloat(order.total_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                          <p><strong>Total:</strong> {parseFloat(order.final_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                           <p><strong>Data:</strong> {new Date(order.created_at).toLocaleString('pt-BR')}</p>
                           <p><strong>Phone:</strong> {order.user_phone}</p>
                       </div>

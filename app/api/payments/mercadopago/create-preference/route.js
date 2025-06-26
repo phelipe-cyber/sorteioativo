@@ -15,9 +15,10 @@ export async function POST(request) {
 
   let connection;
   try {
-    const { orderId: existingOrderId, productId, selectedNumbers, totalAmount } = await request.json();
+ // const { orderId: existingOrderId, productId, selectedNumbers, discountAmount, totalAmount } = await request.json();
+    const { orderId: existingOrderId, productId, selectedNumbers, subtotal, discountAmount, totalAmount, prizeChoice } = await request.json();
 
-    console.log('API create-preference: Dados recebidos:', { existingOrderId, productId, selectedNumbers, totalAmount, userId });
+    console.log('API create-preference: Dados recebidos:', { orderId: existingOrderId, productId, selectedNumbers, subtotal, discountAmount, totalAmount, prizeChoice });
 
     if (!productId || !selectedNumbers || !Array.isArray(selectedNumbers) || selectedNumbers.length === 0 || !totalAmount) {
       console.error('API create-preference: Dados do pedido incompletos ou inválidos.');
@@ -72,7 +73,7 @@ export async function POST(request) {
 
       //   // Atualizar o pedido existente (ex: total, detalhes de pagamento)
       //   await connection.execute(
-      //     "UPDATE orders SET total_amount = ?, payment_details = 'Mercado Pago Iniciado (Retentativa)' WHERE id = ?",
+      //     "UPDATE orders SET final_total = ?, payment_details = 'Mercado Pago Iniciado (Retentativa)' WHERE id = ?",
       //     [totalAmount, existingOrderId]
       //   );
       //   console.log(`API create-preference: Pedido ${existingOrderId} atualizado (total, payment_details).`);
@@ -88,8 +89,8 @@ export async function POST(request) {
       const selectedNumbersJson = JSON.stringify(selectedNumbers.sort((a, b) => a - b));
 
       const [orderResult] = await connection.execute(
-        "INSERT INTO orders (user_id, product_id, total_amount, status, payment_details, pending_selected_numbers) VALUES (?, ?, ?, 'pending', 'Mercado Pago Iniciado', ?)",
-        [userId, productId, totalAmount, selectedNumbersJson] // Adicionado selectedNumbersJson
+        "INSERT INTO orders (user_id, product_id, subtotal, discount_amount, final_total, status, payment_details, pending_selected_numbers) VALUES (?, ?, ?, ?, ?, 'pending', 'Mercado Pago Iniciado', ?)",
+        [userId, productId, subtotal, discountAmount, totalAmount, selectedNumbersJson]
       );
       internalOrderId = orderResult.insertId;
       console.log(`API create-preference: Novo pedido ${internalOrderId} criado com status 'pending' e números pendentes: ${selectedNumbersJson}.`);

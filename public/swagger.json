@@ -838,7 +838,7 @@
                             "type": "string",
                             "format": "date-time"
                           },
-                          "total_amount": {
+                          "final_total": {
                             "type": "number",
                             "format": "float"
                           },

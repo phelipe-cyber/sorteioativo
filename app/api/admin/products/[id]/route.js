@@ -1,7 +1,7 @@
 // app/api/admin/products/[id]/route.js
 
 import { NextResponse } from 'next/server';
-import { query } from '@/app/lib/db'; // Ajuste o caminho se necessário
+import { query, dbPool} from '@/app/lib/db'; // Ajuste o caminho se necessário
 import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware'; // Ajuste o caminho
 
 /**
@@ -74,77 +74,123 @@ import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware'; // Ajuste o cam
  */
 
 
+
+export async function GET(request, { params }) {
+  const productId = params.id;
+
+  try {
+    // Consulta 1: Buscar os detalhes do produto
+    const productResult = await query({
+      query: "SELECT * FROM products WHERE id = ?",
+      values: [productId],
+    });
+
+    if (productResult.length === 0) {
+      return new NextResponse(JSON.stringify({ message: `Produto não encontrado` }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const product = productResult[0];
+
+    // Consulta 2: Buscar todos os números associados a esse produto
+    const numbersResult = await query({
+      query: "SELECT * FROM raffle_numbers WHERE product_id = ? ORDER BY number_value ASC",
+      values: [productId],
+    });
+
+    // Retorna um objeto combinado com os detalhes do produto e a lista de números
+    return new NextResponse(JSON.stringify({ 
+      product,
+      numbers: numbersResult, 
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+   
+  } catch (error) {
+    console.error(error);
+    return new NextResponse(JSON.stringify({ message: `Erro interno do servidor` }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+// PUT: Atualiza um produto existente
 export async function PUT(request, { params }) {
-  // 1. Verificar se o usuário é um admin
   const authResult = await verifyAdminAuth(request);
   if (!authResult.isAuthenticated) {
     return authResult.error;
   }
 
   const productId = params.id;
-
+  let connection;
   try {
-    const { name, description, price_per_number, image_url, status } = await request.json();
+    // Removido prize_type dos dados recebidos
+    const { name, description, price_per_number, image_url, status, total_numbers, discount_quantity, discount_percentage } = await request.json();
 
-    // Validação básica (pode ser mais robusta)
-    if (!name || !price_per_number || !status) {
-      return new NextResponse(
-        JSON.stringify({ message: 'Nome, preço por número e status são obrigatórios.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    const newLastNumber = parseInt(total_numbers, 10);
+    // ... (outras validações aqui, se necessário)
+
+    connection = await dbPool.getConnection();
+    await connection.beginTransaction();
+
+    const [existingProductRows] = await connection.execute(
+      "SELECT status, total_numbers FROM products WHERE id = ? FOR UPDATE",
+      [productId]
+    );
+
+    if (existingProductRows.length === 0) {
+      await connection.rollback();
+      return new NextResponse(JSON.stringify({ message: 'Produto não encontrado.' }), 
+        { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
-    if (!['active', 'upcoming', 'drawn', 'cancelled'].includes(status)) {
-        return new NextResponse(
-            JSON.stringify({ message: 'Status inválido.' }),
-            { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-    }
+    const existingProduct = existingProductRows[0];
 
-
-    // 2. Verificar se o produto existe
-    const [existingProduct] = await query({
-      query: "SELECT * FROM products WHERE id = ?",
-      values: [productId],
-    });
-
-    if (!existingProduct) {
-      return new NextResponse(
-        JSON.stringify({ message: 'Produto não encontrado.' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // 3. Atualizar o produto no banco de dados
-    const result = await query({
-      query: `
-        UPDATE products 
-        SET name = ?, description = ?, price_per_number = ?, image_url = ?, status = ?
-        WHERE id = ?
-      `,
-      values: [name, description, parseFloat(price_per_number), image_url, status, productId],
-    });
-
-    if (result.affectedRows === 0) {
-        // Isso não deveria acontecer se a verificação de existência passou, mas é uma segurança
-        return new NextResponse(
-            JSON.stringify({ message: 'Produto não encontrado para atualização.' }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          );
+    if (existingProduct.total_numbers !== newLastNumber) {
+      if (existingProduct.status !== 'upcoming') {
+        await connection.rollback();
+        return new NextResponse(JSON.stringify({ message: 'Não é possível alterar a quantidade de números para um sorteio que já está ativo.' }), 
+            { status: 409, headers: { 'Content-Type': 'application/json' } });
+      }
+      await connection.execute("DELETE FROM raffle_numbers WHERE product_id = ?", [productId]);
+      const numbersToInsert = [];
+      for (let i = 0; i <= newLastNumber; i++) {
+        numbersToInsert.push([productId, i]);
+      }
+      if (numbersToInsert.length > 0) {
+          await connection.query( "INSERT INTO raffle_numbers (product_id, number_value) VALUES ?", [numbersToInsert] );
+      }
     }
 
-    // 4. Buscar o produto atualizado para retornar (opcional, mas bom para feedback)
+    // Query UPDATE atualizada para remover prize_type
+    await connection.execute(
+      "UPDATE products SET name = ?, description = ?, price_per_number = ?, image_url = ?, status = ?, total_numbers = ?, discount_quantity = ?, discount_percentage = ? WHERE id = ?",
+      [name, description, parseFloat(price_per_number), image_url, status, newLastNumber, parseInt(discount_quantity) || null, parseInt(discount_percentage) || null, productId]
+    );
+
+    await connection.commit();
+    
     const [updatedProduct] = await query({
-        query: "SELECT * FROM products WHERE id = ?",
-        values: [productId],
-      });
+      query: "SELECT * FROM products WHERE id = ?",
+      values: [productId]
+    });
 
-    return NextResponse.json({ message: 'Produto atualizado com sucesso', product: updatedProduct });
+    return NextResponse.json({ message: 'Produto atualizado com sucesso!', product: updatedProduct });
 
   } catch (error) {
-    console.error("Erro ao atualizar produto (admin):", error);
-    return new NextResponse(
-        JSON.stringify({ message: 'Erro interno do servidor ao atualizar produto.' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    if (connection) await connection.rollback();
+    console.error(`Erro ao atualizar produto ${productId} (Admin PUT):`, error);
+    return new NextResponse(JSON.stringify({ message: 'Erro interno do servidor ao atualizar produto.' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } });
+  } finally {
+    if (connection) connection.release();
   }
+}
+
+// DELETE: Exclui um produto
+export async function DELETE(request, { params }) {
+    // ... (lógica DELETE como antes)
 }

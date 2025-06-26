@@ -105,7 +105,7 @@ export async function POST(request) {
 
     // 1. Buscar o pedido pendente e seu productId
     const [orderRows] = await connection.execute(
-      "SELECT id, product_id, status, total_amount FROM orders WHERE id = ? AND user_id = ? FOR UPDATE", // FOR UPDATE
+      "SELECT id, product_id, status, final_total FROM orders WHERE id = ? AND user_id = ? FOR UPDATE", // FOR UPDATE
       [internalOrderId, userId]
     );
 
