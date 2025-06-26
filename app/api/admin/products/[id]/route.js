@@ -78,6 +78,11 @@ import { verifyAdminAuth } from '@/app/lib/adminAuthMiddleware'; // Ajuste o cam
 export async function GET(request, { params }) {
   const productId = params.id;
 
+  const authResult = await verifyAdminAuth(request);
+  if (!authResult.isAuthenticated) {
+    return authResult.error;
+  }
+
   try {
     // Consulta 1: Buscar os detalhes do produto
     const productResult = await query({
@@ -188,9 +193,4 @@ export async function PUT(request, { params }) {
   } finally {
     if (connection) connection.release();
   }
-}
-
-// DELETE: Exclui um produto
-export async function DELETE(request, { params }) {
-    // ... (lógica DELETE como antes)
 }
