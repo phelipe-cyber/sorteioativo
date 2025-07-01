@@ -229,7 +229,7 @@ return (
                </span>
              </div>
              <img 
-                 src={product.image_url || 'https://placehold.co/400x300/e2e8f0/64748b?text=Sem+Imagem'}
+                 src={product.image_url || '/logo.jpg'}
                  alt={product.name}
                  className="w-full h-32 object-cover rounded-md mb-3 bg-gray-100"
              />

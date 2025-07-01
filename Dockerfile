@@ -16,7 +16,7 @@ RUN npm install
 COPY . .
 
 # Passo 6: Exponha a porta que o Next.js usa para o desenvolvimento
-EXPOSE 3000
+EXPOSE 3001
 
 # Passo 7: O comando para iniciar a aplicação em modo de desenvolvimento
 CMD ["npm", "run", "dev"]

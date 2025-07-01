@@ -26,7 +26,7 @@ function ProductCard({ product, isLoading, onClick }) {
         {/* --- CONTAINER DA IMAGEM --- */}
         <div className="w-full h-48 bg-gray-200"> 
           <img
-            src={product.image_url || `https://placehold.co/400x300/E2E8F0/4A5568?text=Imagem`}
+            src={product.image_url || 'logo.jpg'}
             alt={product.name}
             className="w-full h-full object-cover" // object-cover garante que a imagem preencha o container, cortando o excesso
           />

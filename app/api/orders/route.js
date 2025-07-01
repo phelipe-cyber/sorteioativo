@@ -134,6 +134,15 @@ export async function POST(request) {
             status: 409, headers: { 'Content-Type': 'application/json' }, // Conflict
         });
     }
+    
+    if (currentOrder.status === 'pending') {
+        await connection.rollback();
+        console.error(`API /api/orders: Pedido ${internalOrderId} está com status 'pending'. Status atual: ${currentOrder.status}.`);
+        return new NextResponse(JSON.stringify({ message: `Pedido ${internalOrderId} não pode ser finalizado ainda não está pendente de pagamento.` }), {
+            status: 409, headers: { 'Content-Type': 'application/json' }, // Conflict
+        });
+    }
+
 
 
     // 2. Buscar os números que foram RESERVADOS para este pedido

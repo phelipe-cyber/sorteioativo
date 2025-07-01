@@ -35,7 +35,7 @@ services:
     build: .. # Constrói a imagem a partir do Dockerfile na pasta atual
     container_name: nextjs_app_sorteio
     ports:
-      - '3000:3000'
+      - '3001:3001'
     volumes:
       # Monta o código-fonte local no contêiner para permitir o hot-reloading
       - ..:/app

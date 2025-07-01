@@ -22,7 +22,7 @@ export async function verifyAuth(request) {
 
   try {
     const verified = await jwtVerify(token, getJwtSecretKey());
-    console.log('MIDDLEWARE verifyAuth: Token verificado COM SUCESSO. Payload:', verified.payload); // <-- ADICIONE ESTE LOG
+    // console.log('MIDDLEWARE verifyAuth: Token verificado COM SUCESSO. Payload:', verified.payload); // <-- ADICIONE ESTE LOG
     return {
       isAuthenticated: true,
       payload: verified.payload,

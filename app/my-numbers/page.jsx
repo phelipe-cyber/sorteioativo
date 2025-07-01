@@ -156,7 +156,7 @@ function MyNumbersContent() {
                     <div key={order.order_id} className="bg-white p-6 rounded-lg shadow-md">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4">
                             <img 
-                                src={order.product?.image_url || `https://placehold.co/150x100/E2E8F0/4A5568?text=${encodeURIComponent(order.product?.name || 'Produto')}`} 
+                                src={order.product?.image_url || 'logo.jpg' || `Produto`} 
                                 alt={order.product?.name}
                                 className="w-full sm:w-32 h-auto sm:h-20 object-cover rounded-md mb-3 sm:mb-0 sm:mr-4"
                             />
@@ -179,7 +179,7 @@ function MyNumbersContent() {
                                 <div className="flex flex-wrap gap-2">
                                     {order.purchasedNumbers.map(num => (
                                     <span key={num} className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-bold ${order.product?.status === 'drawn' && num === order.product?.winning_number ? 'bg-green-500 text-white' : 'bg-indigo-100 text-indigo-700'}`}>
-                                        {String(num).padStart(2, '0')}
+                                        {String(num).padStart(3, '0')}
                                     </span>
                                     ))}
                                 </div>

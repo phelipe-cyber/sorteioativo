@@ -182,7 +182,7 @@ export default function AdminLogsPage() {
                                             <span className="text-xs text-gray-500">Números:</span>
                                             {log.associatedNumbers.map(num => (
                                                 <span key={num} className="px-1.5 py-0.5 text-xs rounded bg-indigo-100 text-indigo-700 font-mono">
-                                                    {String(num).padStart(2, '0')}
+                                                    {String(num).padStart(3, '0')}
                                                 </span>
                                             ))}
                                         </div>

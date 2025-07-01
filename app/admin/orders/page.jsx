@@ -320,7 +320,7 @@ export default function AdminOrdersPage() {
                                               ? 'bg-green-500 text-white ring-2 ring-offset-1 ring-green-400' 
                                               : 'bg-indigo-100 text-indigo-800'}`
                                       }>
-                                          {String(num).padStart(2, '0')}
+                                          {String(num).padStart(3, '0')}
                                       </span>
                                   ))}
                               </div>
