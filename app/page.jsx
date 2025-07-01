@@ -26,7 +26,7 @@ function ProductCard({ product, isLoading, onClick }) {
         {/* --- CONTAINER DA IMAGEM --- */}
         <div className="w-full h-48 bg-gray-200"> 
           <img
-            src={product.image_url || 'logo.jpg'}
+            src={product.image_url || '/logo.jpg'}
             alt={product.name}
             className="w-full h-full object-cover" // object-cover garante que a imagem preencha o container, cortando o excesso
           />
