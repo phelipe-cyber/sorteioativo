@@ -1,7 +1,7 @@
 // app/api/orders/status/[id]/route.js
 import { NextResponse } from 'next/server';
-import { query } from '../../../../../lib/db';
-import { verifyAuth } from '../../../../../lib/authMiddleware';
+import { query } from '@/app/lib/db';
+import { verifyAuth } from '@/app/lib/authMiddleware';
 
 /**
  * @swagger
