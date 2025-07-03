@@ -64,7 +64,7 @@ export async function GET(request, { params }) {
   try {
     // Consulta 1: Buscar os detalhes do produto
     const productResult = await query({
-      query: "SELECT * FROM products WHERE id = ?",
+      query: "SELECT * FROM products WHERE id = ? and status = 'active'",
       values: [productId],
     });
 

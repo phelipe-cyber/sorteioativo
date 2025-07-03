@@ -35,18 +35,18 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
   const topOfPageRef = useRef(null);
 
   // Esta função pode ser mantida para recarregar os dados após uma ação
-//   const fetchProductData = useCallback(async () => {
-//     if (!product?.id) return;
-//     try {
-//       const response = await fetch(`/api/products/${product.id}`); 
-//       if (!response.ok) throw new Error('Falha ao recarregar os dados dos números.');
-//       const data = await response.json();
-//       console.log("initialNumbers", data);
-//       setNumbers(data.numbers || []); 
-//     } catch (error) {
-//       setUserFeedback(`Erro ao atualizar a lista de números: ${error.message}`);
-//     }
-//   }, [product?.id]);
+  const fetchProductData = useCallback(async () => {
+    if (!product?.id) return;
+    try {
+      const response = await fetch(`/api/products/${product.id}`); 
+      if (!response.ok) throw new Error('Falha ao recarregar os dados dos números.');
+      const data = await response.json();
+      console.log("initialNumbers", data);
+      setNumbers(data.numbers || []); 
+    } catch (error) {
+      setUserFeedback(`Erro ao atualizar a lista de números: ${error.message}`);
+    }
+  }, [product?.id]);
 
   useEffect(() => {
     if (product && isAuthenticated) {
@@ -88,6 +88,7 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
     setUserFeedback('');
     const availableNumbers = numbers.filter(num => num.status === 'available').map(num => num.number_value); 
     if (availableNumbers.length < count) {
+      topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
       setUserFeedback(`Apenas ${availableNumbers.length} números estão disponíveis.`);
       return;
     }
@@ -97,11 +98,12 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
 
   const initiateMercadoPagoPayment = async () => {
     if (selectedNumbers.length === 0) { 
+         topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
         setUserFeedback("Selecione pelo menos um número para continuar.");
-        topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
         return;
     }
     if (!product) { 
+         topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
         setUserFeedback("Detalhes do produto não carregados. Tente recarregar a página.");
         return;
     }
@@ -159,12 +161,14 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
                   // await fetchProductData();
                   setTimeout(() => fetchProductData(), 4000);
               } else {
+                   topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
                   // Para outros erros, lança a exceção para ser apanhada pelo catch
                   throw new Error(data.message || 'Falha ao iniciar o pagamento com Mercado Pago.');
               }
           } else if (data.init_point) {
               window.location.href = data.init_point;
           } else {
+              topOfPageRef.current?.scrollIntoView({ behavior: 'smooth' });
               throw new Error('Link de pagamento do Mercado Pago não recebido.');
           }
               
@@ -182,7 +186,7 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
     return (
       <div className="text-center mt-10 p-6">
         <h2 className="text-xl font-semibold text-red-600">Sorteio Não Encontrado</h2>
-        <p className="text-gray-700 mt-2">Este sorteio pode ter sido removido ou está indisponível.</p>
+        <p className="text-gray-700 mt-2">Este sorteio não está indisponível.</p>
         <Link href="/" className="mt-6 inline-block bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700">Voltar para a Página Principal</Link>
       </div>
     );
@@ -191,10 +195,9 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
   return (
     <div ref={topOfPageRef} className="pb-24">
       {/* Todo o seu JSX da página de detalhes (o que estava no seu ficheiro) vem para aqui */}
-      <Link href="/" className="inline-flex items-center text-indigo-600 hover:underline mb-4">
-        <ArrowLeftIcon /> Voltar para todos os sorteios
-      </Link>
-     
+      <div className="text-center">
+      <Link href="/" className="inline-flex items-center text-indigo-600 hover:underline mb-4 inline-flex items-center mb-4 mt-6 inline-block bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700">Voltar para a Página Principal</Link>
+     </div>
       {userFeedback && (
              <div className={`p-4 mb-6 text-sm rounded-lg ${userFeedback.toLowerCase().includes('erro') ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`} role="alert">
                  {userFeedback}
@@ -240,7 +243,7 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
                     </button>
                     ))}
                     <button
-                        onClick={() => { setSelectedNumbers([]); }}
+                        onClick={() => { setSelectedNumbers([]); setUserFeedback('');}}
                         className="bg-red-200 hover:bg-red-300 text-red-700 font-medium py-2 px-4 rounded-lg text-sm inline-flex items-center shadow-md hover:shadow-lg transition-colors"
                         title="Limpar seleção atual"
                     >
