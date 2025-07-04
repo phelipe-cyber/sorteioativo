@@ -5,10 +5,7 @@ import { AuthProvider } from "@/context/AuthContext"; // Ajuste o caminho se nec
 import Header from "@/components/Header";       // Ajuste o caminho se necessário
 import WhatsAppButton from '@/components/WhatsAppButton'; // <-- Importar o novo componente
 
-// const imageUrl = 'https://i.imgur.com/pKFUgKT.png';
-// const imageUrl = 'https://www.sorteioativo.com.br/logo.jpg';
-const imageUrl = 'https://205d-191-183-36-8.ngrok-free.app/logosorteioativo7.jpeg';
-// const imageUrl = 'https://trocafone.vtexassets.com/arquivos/ids/396113-800-auto?v=638732593373830000&width=800&height=auto&aspect=true';
+const imageUrl = '/logosorteioativo7.jpeg';
 const icon = '/favicon.ico'
 const title = 'Site de Sorteios';
 const description = 'Participe dos nossos sorteios e ganhe prêmios incríveis!';
