@@ -210,7 +210,7 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
             <div className="lg:col-span-1">
                 <div className="bg-white rounded-xl shadow-xl overflow-hidden sticky top-24">
                     <img 
-                        src={product.image_url || '/logo.jpg'}
+                        src={product.image_url || '/logosorteioativo.png'}
                         alt={product.name}
                         className="w-full h-auto object-cover aspect-w-1 aspect-h-1"
                     />

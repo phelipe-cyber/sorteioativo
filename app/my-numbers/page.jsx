@@ -156,7 +156,7 @@ function MyNumbersContent() {
                     <div key={order.order_id} className="bg-white p-6 rounded-lg shadow-md">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4">
                             <img 
-                                src={order.product?.image_url || '/logo.jpg' || `Produto`} 
+                                src={order.product?.image_url || '/logosorteioativo.png' || `Produto`} 
                                 alt={order.product?.name}
                                 className="w-full sm:w-32 h-auto sm:h-20 object-cover rounded-md mb-3 sm:mb-0 sm:mr-4"
                             />

@@ -49,17 +49,6 @@ export default function AdminLayout({ children }) {
       
       {/* Conteúdo Principal */}
       <div className="flex flex-col flex-1 w-0 overflow-hidden">
-        {/* Botão do menu mobile no header do conteúdo */}
-        <div className="md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3">
-            <button
-                type="button"
-                className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                onClick={() => setSidebarOpen(true)}
-            >
-                <span className="sr-only">Abrir sidebar</span>
-                <IconMenu />
-            </button>
-        </div>
         {/* O scroll agora acontece apenas aqui dentro */}
         <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none p-2 sm:p-2 md:p-1">
           {children}

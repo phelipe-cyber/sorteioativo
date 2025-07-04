@@ -229,7 +229,7 @@ return (
                </span>
              </div>
              <img 
-                 src={product.image_url || '/logo.jpg'}
+                 src={product.image_url || '/logosorteioativo.png'}
                  alt={product.name}
                  className="w-full h-32 object-cover rounded-md mb-3 bg-gray-100"
              />
