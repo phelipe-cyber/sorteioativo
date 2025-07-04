@@ -82,7 +82,7 @@ export async function GET(request, { params }) {
       values: [productId],
     });
 
-    if (!product || product.status === 'cancelled') {
+    if (!product || product.status === 'cancelled' || product.status === 'upcoming' ) {
       return new NextResponse(
         JSON.stringify({ message: 'Produto não encontrado ou está indisponível.' }), 
         { status: 404, headers: { 'Content-Type': 'application/json' } }
