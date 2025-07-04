@@ -61,45 +61,53 @@ import { query } from '@/app/lib/db'; // Ajuste o caminho
 export async function GET(request, { params }) {
   const productId = params.id;
 
+  if (!productId || isNaN(parseInt(productId, 10))) {
+    return new NextResponse(JSON.stringify({ message: 'ID do produto inválido.' }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
-    // Consulta 1: Buscar os detalhes do produto
-    const productResult = await query({
-      query: "SELECT * FROM products WHERE id = ? and status = 'active'",
+    // --- QUERY ATUALIZADA PARA INCLUIR O NOME DO GANHADOR ---
+    const [product] = await query({
+      query: `
+        SELECT 
+            p.id, p.name, p.description, p.price_per_number, p.image_url, 
+            p.status, p.total_numbers, p.prize_type, p.discount_quantity, 
+            p.discount_percentage, p.winning_number,
+            u.name as winner_name 
+        FROM products p
+        LEFT JOIN users u ON p.winner_user_id = u.id
+        WHERE p.id = ?
+      `,
       values: [productId],
     });
 
-    if (productResult.length === 0) {
-      return new NextResponse(JSON.stringify({ message: `Produto não encontrado` }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!product || product.status === 'cancelled') {
+      return new NextResponse(
+        JSON.stringify({ message: 'Produto não encontrado ou está indisponível.' }), 
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    const product = productResult[0];
-
-    // Consulta 2: Buscar todos os números associados a esse produto
-    const numbersResult = await query({
-      query: "SELECT * FROM raffle_numbers WHERE product_id = ? ORDER BY number_value ASC",
-      values: [productId],
+    const numbers = await query({
+      query: "SELECT number_value, status, user_id FROM raffle_numbers WHERE product_id = ? ORDER BY number_value ASC",
+      values: [product.id],
     });
-
-    // Retorna um objeto combinado com os detalhes do produto e a lista de números
-    return new NextResponse(JSON.stringify({ 
+    
+    return NextResponse.json({
       product,
-      numbers: numbersResult, 
-    }), {
-      headers: { 'Content-Type': 'application/json' },
+      numbers,
     });
 
-   
   } catch (error) {
-    console.error(error);
-    return new NextResponse(JSON.stringify({ message: `Erro interno do servidor` }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error(`Erro ao buscar produto por ID '${productId}':`, error);
+    return new NextResponse(
+        JSON.stringify({ message: 'Erro interno do servidor ao buscar os detalhes do produto.' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-};
+}
+
 
 // export async function PUT(request, { params }) {
 //   // 1. Verificar se o usuário é um admin

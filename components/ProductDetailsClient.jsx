@@ -24,6 +24,26 @@ const ClearIcon = ({ className = "w-4 h-4 mr-2" }) => (
     </svg>
 );
 
+const TrophyIcon = ({ className = "w-6 h-6" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+  </svg>
+);
+
+const WinnerInfo = ({ winnerName, winningNumber }) => (
+  <div className="bg-yellow-50 border border-yellow-200 p-6 sm:p-8 rounded-xl my-8 text-center shadow-lg relative overflow-hidden">
+      <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">
+          Sorteio Finalizado!
+      </div>
+      <div className="flex justify-center items-center">
+          <TrophyIcon className="w-32 h-32 sm:w-40 sm:h-40 text-yellow-400 opacity-90" />
+      </div>
+      <p className="mt-4 text-lg text-gray-700">O ganhador foi:</p>
+      <p className="text-2xl sm:text-3xl font-bold text-green-600">{winnerName}</p>
+      <p className="mt-2 text-gray-700">Com o número da sorte:</p>
+      <p className="font-bold text-4xl sm:text-5xl text-indigo-600">{String(winningNumber).padStart(2, '0')}</p>
+  </div>
+);
 // Este componente recebe os dados iniciais do produto como props
 export default function ProductDetailsClient({ product, initialNumbers }) {
   const [numbers, setNumbers] = useState(initialNumbers || []); 
@@ -74,8 +94,10 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
         : [...prev, numberData.number_value]
     );
   };
-  
+
   const getNumberClass = (numberData) => {
+    const isWinner = product.status === 'drawn' && product.winning_number === numberData.number_value;
+    if (isWinner) return 'bg-green-500 text-white ring-2 ring-offset-1 ring-green-400 animate-pulse';
     if (selectedNumbers.includes(numberData.number_value)) return 'bg-indigo-600 text-white ring-2 ring-offset-1 ring-indigo-500'; 
     switch (numberData.status) {
       case 'sold': return 'bg-red-500 text-white cursor-not-allowed opacity-70'; 
@@ -191,7 +213,7 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
       </div>
     );
   }
-
+  const isSorteioDrawn = product.status === 'drawn';
   return (
     <div ref={topOfPageRef} className="pb-24">
       {/* Todo o seu JSX da página de detalhes (o que estava no seu ficheiro) vem para aqui */}
@@ -203,17 +225,21 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
                  {userFeedback}
              </div>
         )}
-
+      {isSorteioDrawn && product.winner_name && (
+        <WinnerInfo winnerName={product.winner_name} winningNumber={product.winning_number} />
+      )}
         {/* --- NOVO LAYOUT DE DUAS COLUNAS PARA DESKTOP --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 xl:gap-12">
-            {/* Coluna da Imagem e Detalhes */}
-            <div className="lg:col-span-1">
-                <div className="bg-white rounded-xl shadow-xl overflow-hidden sticky top-24">
-                    <img 
-                        src={product.image_url || '/logosorteioativo.png'}
-                        alt={product.name}
-                        className="w-full h-auto object-cover aspect-w-1 aspect-h-1"
-                    />
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 xl:gap-12">
+            {/* Coluna da Esquerda: Imagem e Detalhes */}
+            <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+                    <div className="bg-gray-100 flex items-center justify-center p-4">
+                        <img 
+                            src={product.image_url || '/logosorteioativo.png' || `https://placehold.co/800x600/CBD5E1/4A5569?text=${encodeURIComponent(product.name)}`} 
+                            alt={product.name}
+                            className="w-full h-auto object-cover rounded-md max-h-80"
+                        />
+                    </div>
                     <div className="p-6">
                         <h1 className="text-2xl font-bold text-gray-800 mb-2">{product.name}</h1>
                         <p className="text-xl font-semibold text-green-600 mb-4">
@@ -225,42 +251,46 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
                 </div>
             </div>
 
-            {/* Coluna da Seleção de Números */}
-            <div className="lg:col-span-2">
+            {/* Coluna da Direita: Seleção de Números */}
+            <div className="lg:col-span-3">
                 <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl">
-                <h3 className="text-xl font-semibold text-center text-gray-700 mb-6">Escolha os seus números:</h3>
+                <h3 className="text-xl font-semibold text-center text-gray-700 mb-6">
+                    {isSorteioDrawn ? 'Números do Sorteio:' : 'Escolha os seus números:'}
+                </h3>
                 
-                <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8">
-                    {[5, 10, 15, 20].map(numCount => (
-                    <button
-                        key={numCount}
-                        onClick={() => handleSelectRandomNumbers(numCount)}
-                        className="bg-gray-700 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg text-sm inline-flex items-center shadow-md hover:shadow-lg transition-all"
-                        title={`Selecionar ${numCount} números aleatórios`}
-                    >
-                        <DiceIcon className="w-5 h-5 mr-2" />
-                        {numCount} Aleatórios
-                    </button>
-                    ))}
-                    <button
-                        onClick={() => { setSelectedNumbers([]); setUserFeedback('');}}
-                        className="bg-red-200 hover:bg-red-300 text-red-700 font-medium py-2 px-4 rounded-lg text-sm inline-flex items-center shadow-md hover:shadow-lg transition-colors"
-                        title="Limpar seleção atual"
-                    >
-                        <ClearIcon className="w-5 h-5 mr-2" />
-                        Limpar
-                    </button>
-                </div>
+                {!isSorteioDrawn && (
+                    <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8">
+                        {[5, 10, 15, 20].map(numCount => (
+                        <button
+                            key={numCount}
+                            onClick={() => handleSelectRandomNumbers(numCount)}
+                            className="bg-gray-700 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg text-sm inline-flex items-center shadow-md hover:shadow-lg transition-all"
+                            title={`Selecionar ${numCount} números aleatórios`}
+                        >
+                            <DiceIcon className="w-5 h-5 mr-2" />
+                            {numCount} Aleatórios
+                        </button>
+                        ))}
+                        <button
+                            onClick={() => { setSelectedNumbers([]); }}
+                            className="bg-red-200 hover:bg-red-300 text-red-700 font-medium py-2 px-4 rounded-lg text-sm inline-flex items-center shadow-md hover:shadow-lg transition-colors"
+                            title="Limpar seleção atual"
+                        >
+                            <ClearIcon className="w-5 h-5 mr-2" />
+                            Limpar
+                        </button>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-7 sm:grid-cols-10 gap-1.5 sm:gap-2">
                     {numbers.map(numberData => ( 
                         <button
                             key={numberData.number_value}
                             onClick={() => handleNumberClick(numberData)}
-                            disabled={(numberData.status !== 'available' && !selectedNumbers.includes(numberData.number_value))}
-                            className={`p-2 rounded-md text-center font-bold transition-all duration-150 ease-in-out text-xs sm:text-sm border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 ${getNumberClass(numberData)} ${(numberData.status !== 'available' && !selectedNumbers.includes(numberData.number_value)) ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105 hover:shadow-md'}`}
+                            disabled={isSorteioDrawn || (numberData.status !== 'available' && !selectedNumbers.includes(numberData.number_value))}
+                            className={`p-2 rounded-md text-center font-bold transition-all duration-150 ease-in-out text-xs sm:text-sm border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 ${getNumberClass(numberData)} ${isSorteioDrawn ? 'cursor-not-allowed' : ''}`}
                         >
-                            {String(numberData.number_value).padStart(3, '0')}
+                            {String(numberData.number_value).padStart(2, '0')}
                         </button>
                     ))}
                 </div>
@@ -268,10 +298,10 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
             </div>
         </div>
 
-        {selectedNumbers.length > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-2xl border-t-2 border-gray-200 z-30">
-                 <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
-                    {(() => {
+        {selectedNumbers.length > 0 && !isSorteioDrawn && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg border-t-2 z-20">
+               <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center">
+               {(() => {
                         const count = selectedNumbers.length;
                         const subtotal = parseFloat(product?.price_per_number || 0) * count;
                         const discountQuantity = product?.discount_quantity;
@@ -310,8 +340,8 @@ export default function ProductDetailsClient({ product, initialNumbers }) {
                         'Ir para Pagamento' 
                       )}
                     </button>
-                </div>
-            </div>
+              </div>
+          </div>
         )}
 
     </div>

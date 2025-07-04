@@ -12,6 +12,28 @@ const PixIcon = ({ className = "w-4 h-4" }) => (
     </svg>
 );
 
+function WinnerCard({ winner }) {
+  return (
+      <div className="flex items-center space-x-4 bg-white p-3 rounded-lg shadow-sm border border-gray-200 transition-shadow hover:shadow-md">
+          <img 
+              src={winner.product_image_url || '/logosorteioativo.png' || `https://placehold.co/80x80/E2E8F0/4A5568?text=Prêmio`}
+              alt={winner.product_name}
+              className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0"> {/* min-w-0 para permitir que o truncate funcione em flexbox */}
+              <p className="text-sm font-semibold text-gray-800 truncate" title={winner.product_name}>
+                  {winner.product_name}
+              </p>
+              <p className="text-xs text-gray-500">
+                  Ganhador(a): <span className="font-medium text-green-600">{winner.winner_name}</span>
+              </p>
+              <p className="text-xs text-gray-500">
+                  Número: <span className="font-bold text-indigo-600">{String(winner.winning_number).padStart(2, '0')}</span>
+              </p>
+          </div>
+      </div>
+  );
+}
 
 function ProductCard({ product, isLoading, onClick }) {
   return (
@@ -80,25 +102,47 @@ function ProductCard({ product, isLoading, onClick }) {
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
+  const [winners, setWinners] = useState([]); // --- NOVO ESTADO PARA OS GANHADORES ---
   const [loadingPage, setLoadingPage] = useState(true);
   const router = useRouter(); 
   const [loadingProductId, setLoadingProductId] = useState(null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       setLoadingPage(true);
       try {
-        const response = await fetch('/api/products');
-        const data = await response.json();
-        setProducts(data.products || []);
+        // Buscar ambos os dados em paralelo para otimizar o carregamento
+        const [productsResponse, winnersResponse] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/winners') // Nova chamada à API de ganhadores
+        ]);
+
+        const productsData = await productsResponse.json();
+        const winnersData = await winnersResponse.json();
+
+        if (productsResponse.ok) {
+            setProducts(productsData.products || []);
+        } else {
+            console.error("Falha ao buscar produtos:", productsData.message);
+            setProducts([]);
+        }
+        
+        if (winnersResponse.ok) {
+            setWinners(winnersData.winners || []);
+        } else {
+            console.error("Falha ao buscar ganhadores:", winnersData.message);
+            setWinners([]);
+        }
+
       } catch (error) {
-        console.error("Falha ao buscar produtos:", error);
+        console.error("Falha ao buscar dados da página inicial:", error);
         setProducts([]);
+        setWinners([]);
       } finally {
         setLoadingPage(false);
       }
     };
-    fetchProducts();
+    fetchData();
   }, []);
 
   const handleCardClick = (productId) => {
@@ -110,14 +154,14 @@ export default function HomePage() {
     return (
         <div className="flex justify-center items-center h-64">
             <Spinner className="h-10 w-10 text-indigo-600"/>
-            <span className="ml-3 text-lg">Carregando sorteios...</span>
+            <span className="ml-3 text-lg">Carregando informações...</span>
         </div>
     );
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-center text-gray-800 my-8">Sorteios Ativos</h2>
+      <h2 className="text-3xl font-bold text-center text-gray-800 my-8">Sorteios Ativos</h2>
       
       {products.length === 0 ? (
         <div className="text-center py-10">
@@ -134,6 +178,18 @@ export default function HomePage() {
               onClick={() => handleCardClick(product.id)}
             />
           ))}
+        </div>
+      )}
+
+      {/* --- SEÇÃO DE GANHADORES ADICIONADA AQUI --- */}
+      {winners.length > 0 && (
+        <div className="mt-5 lg:mt-5">
+            <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Últimos Ganhadores</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {winners.map(winner => (
+                    <WinnerCard key={winner.product_id} winner={winner} />
+                ))}
+            </div>
         </div>
       )}
     </div>
